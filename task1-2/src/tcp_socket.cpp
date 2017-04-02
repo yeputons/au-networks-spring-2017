@@ -22,6 +22,21 @@ static const int SOCKET_ERROR = -1;
 #define closesocket close
 #endif
 
+#ifdef _WIN32
+class WSAStartupper {
+public:
+  WSAStartupper() {
+    WSADATA data;
+    assert(WSAStartup(MAKEWORD(2, 2), &data) == 0);
+  }
+  // We do not call WSACleanup() because of troubles with order of global ctors/dtors.
+private:
+  WSAStartupper(WSAStartupper &&) = delete;
+  WSAStartupper(const WSAStartupper&) = delete;
+  WSAStartupper& operator=(WSAStartupper) = delete;
+};
+#endif
+
 std::string get_socket_error(int code) {
   #ifdef _WIN32
   LPVOID msg_buf;
@@ -141,6 +156,8 @@ private:
 };
 
 void tcp_client_socket::connect() {
+  static WSAStartupper wsa_startupper_;
+
   NameResolver resolver(host_.c_str(), port_);
   SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   ensure_or_throw(sock != INVALID_SOCKET, socket_error);
@@ -154,6 +171,8 @@ void tcp_client_socket::connect() {
 }
 
 tcp_server_socket::tcp_server_socket(hostname host, tcp_port port) {
+  static WSAStartupper wsa_startupper_;
+
   NameResolver resolver(host, port);
   sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   ensure_or_throw(sock_ != INVALID_SOCKET, socket_error);
