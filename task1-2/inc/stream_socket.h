@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cstddef>
+#include <exception>
+#include <stdexcept>
+#include <string>
 
 /*
  * All the functions in the interface are blocking.
@@ -51,3 +54,28 @@ struct stream_server_socket
 };
 
 typedef const char* hostname;
+
+class socket_uninitialized : public std::logic_error {
+public:
+  explicit socket_uninitialized(const std::string &what_arg) : logic_error(what_arg) {}
+};
+
+class socket_error : public std::runtime_error {
+public:
+  explicit socket_error(const std::string &what_arg) : runtime_error(what_arg) {}
+};
+
+class host_resolve_error : public socket_error {
+public:
+  explicit host_resolve_error(const std::string &what_arg) : socket_error(what_arg) {}
+};
+
+class socket_io_error : public socket_error {
+public:
+  explicit socket_io_error(const std::string &what_arg) : socket_error(what_arg) {}
+};
+
+class socket_eof_error : public socket_io_error {
+public:
+  explicit socket_eof_error(const std::string &what_arg) : socket_io_error(what_arg) {}
+};

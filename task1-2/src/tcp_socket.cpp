@@ -19,7 +19,24 @@
 #else
 static const int INVALID_SOCKET = -1;
 static const int SOCKET_ERROR = -1;
+#define closesocket close
 #endif
+
+std::string get_socket_error() {
+  #ifdef _WIN32
+  #error get_socket_error is unimplemented
+  #else
+  return strerror(errno);
+  #endif
+}
+
+template<typename T>
+void ensure_or_throw_impl(bool condition, const char *prefix) {
+  if (!condition) {
+    throw T(prefix + get_socket_error());
+  }
+}
+#define ensure_or_throw(cond, error) ensure_or_throw_impl<error>(cond, #error " at " __FILE__ ": condition " #cond " failed: ")
 
 tcp_connection_socket::tcp_connection_socket() : sock_(INVALID_SOCKET) {}
 
@@ -38,28 +55,26 @@ tcp_connection_socket::~tcp_connection_socket() {
   if (sock_ == INVALID_SOCKET) {
     return;
   }
-  #ifdef _WIN32
   assert(closesocket(sock_) == 0);
-  #else
-  assert(close(sock_) == 0);
-  #endif
 }
 
 void tcp_connection_socket::send(const void *buf, size_t size) {
-  assert(sock_ != INVALID_SOCKET);
+  ensure_or_throw(sock_ != INVALID_SOCKET, socket_uninitialized);
   for (size_t i = 0; i < size;) {
     int sent = ::send(sock_, static_cast<const char*>(buf) + i, size - i, 0);
-    assert(sent != SOCKET_ERROR);
+    ensure_or_throw(sent != SOCKET_ERROR, socket_io_error);
     i += sent;
   }
 }
 
 void tcp_connection_socket::recv(void *buf, size_t size) {
-  assert(sock_ != INVALID_SOCKET);
+  ensure_or_throw(sock_ != INVALID_SOCKET, socket_uninitialized);
   for (size_t i = 0; i < size;) {
     int recved = ::recv(sock_, static_cast<char*>(buf) + i, size - i, 0);
-    assert(recved != SOCKET_ERROR);
-    assert(recved != 0);  // Gracefully closed.
+    ensure_or_throw(recved != SOCKET_ERROR, socket_io_error);
+    if (recved == 0) {
+      throw socket_eof_error("Socket was gracefully closed");
+    }
     i += recved;
   }
 }
@@ -75,8 +90,8 @@ public:
 
     std::stringstream port_str;  // to_string in unavailable in MinGW.
     port_str << port;
-    assert(getaddrinfo(host, port_str.str().c_str(), &hints, &addrs) == 0);
-    assert(addrs != nullptr);
+    ensure_or_throw(getaddrinfo(host, port_str.str().c_str(), &hints, &addrs) == 0, host_resolve_error);
+    ensure_or_throw(addrs != nullptr, host_resolve_error);
   }
 
   sockaddr* ai_addr() {
@@ -98,17 +113,27 @@ private:
 void tcp_client_socket::connect() {
   NameResolver resolver(host_.c_str(), port_);
   SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  assert(sock != INVALID_SOCKET);
-  assert(::connect(sock, resolver.ai_addr(), resolver.ai_addrlen()) == 0);
-  sock_ = tcp_connection_socket(sock);
+  ensure_or_throw(sock != INVALID_SOCKET, socket_error);
+  try {
+    ensure_or_throw(::connect(sock, resolver.ai_addr(), resolver.ai_addrlen()) == 0, socket_error);
+    sock_ = tcp_connection_socket(sock);
+  } catch (...) {
+    assert(closesocket(sock) == 0);
+    throw;
+  }
 }
 
 tcp_server_socket::tcp_server_socket(hostname host, tcp_port port) {
   NameResolver resolver(host, port);
   sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  assert(sock_ != INVALID_SOCKET);
-  assert(::bind(sock_, resolver.ai_addr(), resolver.ai_addrlen()) == 0);
-  assert(listen(sock_, SOMAXCONN) == 0);
+  ensure_or_throw(sock_ != INVALID_SOCKET, socket_error);
+  try {
+    ensure_or_throw(::bind(sock_, resolver.ai_addr(), resolver.ai_addrlen()) == 0, socket_error);
+    ensure_or_throw(listen(sock_, SOMAXCONN) == 0, socket_error);
+  } catch (...) {
+    assert(closesocket(sock_) == 0);
+    throw;
+  }
 }
 
 tcp_server_socket::tcp_server_socket(tcp_server_socket &&other) : sock_(other.sock_) {
@@ -120,21 +145,22 @@ tcp_server_socket& tcp_server_socket::operator=(tcp_server_socket other) {
 }
 
 stream_socket* tcp_server_socket::accept_one_client() {
-  assert(sock_ != INVALID_SOCKET);
+  ensure_or_throw(sock_ != INVALID_SOCKET, socket_uninitialized);
   sockaddr addr;
   socklen_t addrlen = sizeof(addr);
   SOCKET client = accept(sock_, &addr, &addrlen);
-  assert(client != INVALID_SOCKET);
-  return new tcp_connection_socket(client);
+  ensure_or_throw(client != INVALID_SOCKET, socket_error);
+  try {
+    return new tcp_connection_socket(client);
+  } catch (...) {
+    assert(closesocket(client) == 0);
+    throw;
+  }
 }
 
 tcp_server_socket::~tcp_server_socket() {
   if (sock_ == INVALID_SOCKET) {
     return;
   }
-  #ifdef _WIN32
   assert(closesocket(sock_) == 0);
-  #else
-  assert(close(sock_) == 0);
-  #endif
 }
