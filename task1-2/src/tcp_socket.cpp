@@ -64,7 +64,7 @@ tcp_connection_socket::tcp_connection_socket() : sock_(INVALID_SOCKET) {}
 tcp_connection_socket::tcp_connection_socket(SOCKET sock) : sock_(sock) {}
 
 tcp_connection_socket::tcp_connection_socket(tcp_connection_socket &&other) : sock_(other.sock_) {
-  other.sock_ = static_cast<SOCKET>(0);
+  other.sock_ = INVALID_SOCKET;
 }
 
 tcp_connection_socket& tcp_connection_socket::operator=(tcp_connection_socket other) {
