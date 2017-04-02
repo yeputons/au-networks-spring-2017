@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <memory.h>
 #include <sstream>
 #include "tcp_socket.h"
 #ifdef _WIN32
@@ -6,6 +7,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else
+#include <unistd.h>
+#include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #endif

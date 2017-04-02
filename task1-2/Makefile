@@ -12,8 +12,8 @@ all: $(TARGETS)
 test: $(SRCS_test:$(SRCDIR)/%.cpp=$(BINDIR)/%.o)
 
 CXX=g++
-CXXFLAGS=-pedantic -Wall -Wshadow -Wextra -Werror -std=c++11 -I$(INCDIR)
-LDFLAGS=
+CXXFLAGS=-pthread -pedantic -Wall -Wshadow -Wextra -Werror -std=c++11 -I$(INCDIR)
+LDFLAGS=-pthread
 LDLIBS=
 ifeq ($(OS),Windows_NT)
   CXXFLAGS+=-DWINVER=WindowsXP
