@@ -22,21 +22,42 @@ static const int SOCKET_ERROR = -1;
 #define closesocket close
 #endif
 
+std::string get_socket_error(int code) {
+  #ifdef _WIN32
+  LPVOID msg_buf;
+  assert(FormatMessage(
+      FORMAT_MESSAGE_ALLOCATE_BUFFER |
+      FORMAT_MESSAGE_FROM_SYSTEM |
+      FORMAT_MESSAGE_IGNORE_INSERTS,
+      NULL,
+      code,
+      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+      (LPTSTR)&msg_buf,
+      0, NULL) != 0);
+  std::string result((char*)msg_buf);
+  LocalFree(msg_buf);
+  return result;
+  #else
+  return strerror(code);
+  #endif
+}
 std::string get_socket_error() {
   #ifdef _WIN32
-  #error get_socket_error is unimplemented
+  return get_socket_error(WSAGetLastError());
   #else
-  return strerror(errno);
+  return get_socket_error(errno);
   #endif
 }
 
 template<typename T>
-void ensure_or_throw_impl(bool condition, const char *prefix) {
+void ensure_or_throw_impl(bool condition, const char *errname, const char *funname, const char *file, int line, const char *cond) {
   if (!condition) {
-    throw T(prefix + get_socket_error());
+    std::stringstream msg;
+    msg << errname << " in " << funname << "() at " << file << ":" << line << ": condition " << cond << " failed: " << get_socket_error();
+    throw T(msg.str());
   }
 }
-#define ensure_or_throw(cond, error) ensure_or_throw_impl<error>(cond, #error " at " __FILE__ ": condition " #cond " failed: ")
+#define ensure_or_throw(cond, error) ensure_or_throw_impl<error>(cond, #error, __FUNCTION__, __FILE__, __LINE__, #cond)
 
 tcp_connection_socket::tcp_connection_socket() : sock_(INVALID_SOCKET) {}
 
