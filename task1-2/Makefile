@@ -15,6 +15,10 @@ CXX=g++
 CXXFLAGS=-pedantic -Wall -Wshadow -Wextra -Werror -std=c++11 -I$(INCDIR)
 LDFLAGS=
 LDLIBS=
+ifeq ($(OS),Windows_NT)
+  CXXFLAGS+=-DWINVER=WindowsXP
+  LDLIBS+=-lws2_32
+endif
 
 $(TARGETS):
 	$(CXX) -o $@ $(LDFLAGS) $^ $(LDLIBS)
