@@ -3,10 +3,11 @@
 #include <cstddef>
 #include <memory>
 #include <cstring>
+#include <assert.h>
 #include <pthread.h>
 
 #define TEST_TCP_STREAM_SOCKET
-#define TEST_AU_STREAM_SOCKET
+//#define TEST_AU_STREAM_SOCKET
 
 #include "stream_socket.h"
 #ifdef TEST_TCP_STREAM_SOCKET
