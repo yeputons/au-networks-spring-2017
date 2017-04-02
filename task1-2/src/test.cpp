@@ -5,17 +5,25 @@
 #include <cstring>
 #include <pthread.h>
 
-#include "stream_socket.h"
-#include "tcp_socket.h"
-#include "au_stream_socket.h"
-
 #define TEST_TCP_STREAM_SOCKET
 #define TEST_AU_STREAM_SOCKET
 
+#include "stream_socket.h"
+#ifdef TEST_TCP_STREAM_SOCKET
+#include "tcp_socket.h"
+#endif
+#ifdef TEST_AU_STREAM_SOCKET
+#include "au_stream_socket.h"
+#endif
+
 const char *TEST_ADDR = "localhost";
+#ifdef TEST_TCP_STREAM_SOCKET
 const tcp_port TCP_TEST_PORT = 40002;
+#endif
+#ifdef TEST_AU_STREAM_SOCKET
 const au_stream_port AU_TEST_CLIENT_PORT = 40001;
 const au_stream_port AU_TEST_SERVER_PORT = 301;
+#endif
 
 static std::unique_ptr<stream_client_socket> client;
 static std::unique_ptr<stream_server_socket> server;
@@ -94,32 +102,36 @@ static void test_stream_sockets_partial_data_sent()
     assert(thrown);
 }
 
+#ifdef TEST_TCP_STREAM_SOCKET
 static void test_tcp_stream_sockets()
 {
-#ifdef TEST_TCP_STREAM_SOCKET
     server.reset(new tcp_server_socket(TEST_ADDR, TCP_TEST_PORT));
     client.reset(new tcp_client_socket(TEST_ADDR, TCP_TEST_PORT));
 
     test_stream_sockets_datapipe();
     test_stream_sockets_partial_data_sent();
-#endif
 }
+#endif
 
+#ifdef TEST_AU_STREAM_SOCKET
 static void test_au_stream_sockets()
 {
-#ifdef TEST_AU_STREAM_SOCKET
     server.reset(new au_stream_server_socket(TEST_ADDR, AU_TEST_SERVER_PORT));
     client.reset(new au_stream_client_socket(TEST_ADDR, AU_TEST_CLIENT_PORT, AU_TEST_SERVER_PORT));
 
     test_stream_sockets_datapipe();
     test_stream_sockets_partial_data_sent();
-#endif
 }
+#endif
 
 int main()
 {
+    #ifdef TEST_TCP_STREAM_SOCKET
     test_tcp_stream_sockets();
+    #endif
+    #ifdef TEST_AU_STREAM_SOCKET
     test_au_stream_sockets();
+    #endif
 
     return 0;
 }
