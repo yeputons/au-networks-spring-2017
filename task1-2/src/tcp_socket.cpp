@@ -111,8 +111,17 @@ public:
 
     std::stringstream port_str;  // to_string in unavailable in MinGW.
     port_str << port;
-    ensure_or_throw(getaddrinfo(host, port_str.str().c_str(), &hints, &addrs) == 0, host_resolve_error);
-    ensure_or_throw(addrs != nullptr, host_resolve_error);
+    int result = getaddrinfo(host, port_str.str().c_str(), &hints, &addrs);
+    if (result != 0) {
+      std::stringstream msg;
+      msg << "Unable to resolve host '" << host << "': " << get_socket_error(result);
+      throw host_resolve_error(msg.str());
+    }
+    if (addrs == nullptr) {
+      std::stringstream msg;
+      msg << "Unable to resolve host '" << host << "': no matching host found";
+      throw host_resolve_error(msg.str());
+    }
   }
 
   sockaddr* ai_addr() {
