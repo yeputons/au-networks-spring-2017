@@ -156,7 +156,9 @@ private:
 };
 
 void tcp_client_socket::connect() {
+  #ifdef _WIN32
   static WSAStartupper wsa_startupper_;
+  #endif
 
   NameResolver resolver(host_.c_str(), port_);
   SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -171,7 +173,9 @@ void tcp_client_socket::connect() {
 }
 
 tcp_server_socket::tcp_server_socket(hostname host, tcp_port port) {
+  #ifdef _WIN32
   static WSAStartupper wsa_startupper_;
+  #endif
 
   NameResolver resolver(host, port);
   sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
