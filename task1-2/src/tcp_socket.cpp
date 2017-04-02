@@ -122,7 +122,8 @@ tcp_server_socket& tcp_server_socket::operator=(tcp_server_socket other) {
 stream_socket* tcp_server_socket::accept_one_client() {
   assert(sock_ != INVALID_SOCKET);
   sockaddr addr;
-  SOCKET client = accept(sock_, &addr, nullptr);
+  socklen_t addrlen = sizeof(addr);
+  SOCKET client = accept(sock_, &addr, &addrlen);
   assert(client != INVALID_SOCKET);
   return new tcp_connection_socket(client);
 }
