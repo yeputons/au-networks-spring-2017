@@ -2,14 +2,19 @@
 
 # Based on https://github.com/yeputons/project-templates
 
-TARGETS=test
-SRCS_test=$(SRCDIR)/tcp_socket.cpp $(SRCDIR)/test.cpp
+TARGETS=test client server
+SRCS_common=$(SRCDIR)/tcp_socket.cpp $(SRCDIR)/protocol.cpp
+SRCS_test=$(SRCS_common) $(SRCDIR)/test.cpp
+SRCS_client=$(SRCS_common) $(SRCDIR)/client.cpp
+SRCS_server=$(SRCS_common) $(SRCDIR)/server.cpp
 BINDIR=.bin
 SRCDIR=src
 INCDIR=inc
 
 all: $(TARGETS)
 test: $(SRCS_test:$(SRCDIR)/%.cpp=$(BINDIR)/%.o)
+client: $(SRCS_client:$(SRCDIR)/%.cpp=$(BINDIR)/%.o)
+server: $(SRCS_server:$(SRCDIR)/%.cpp=$(BINDIR)/%.o)
 
 CXX=g++
 CXXFLAGS=-pthread -pedantic -Wall -Wshadow -Wextra -Werror -std=c++11 -I$(INCDIR)
