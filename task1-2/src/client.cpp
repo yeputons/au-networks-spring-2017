@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -21,8 +22,7 @@ void do_register(stream_client_socket &sock) {
 
 void do_login(stream_client_socket &sock) {
   LoginMessage msg;
-  std::cout << "client_id? ";
-  std::cin >> msg.client_id;
+  assert(std::cin >> msg.client_id);
   proto_send(sock, msg);
 }
 
@@ -35,10 +35,8 @@ void do_balance(stream_client_socket &sock) {
 
 void do_transfer(stream_client_socket &sock) {
   TransferRequest msg;
-  std::cout << "transfer_to? ";
-  std::cin >> msg.transfer_to;
-  std::cout << "amount? ";
-  std::cin >> msg.amount;
+  assert(std::cin >> msg.transfer_to);
+  assert(std::cin >> msg.amount);
   proto_send(sock, msg);
 }
 
