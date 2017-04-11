@@ -12,7 +12,7 @@ using std::stringstream;
 template<typename T>
 void write(ostream &os, const T& val_) {
   typename std::make_unsigned<T>::type val = val_;
-  for (std::size_t i = sizeof(val) - 1; i >= 0; i--) {
+  for (int i = static_cast<int>(sizeof(val)) - 1; i >= 0; i--) {
     std::uint8_t byte = (val >> (8 * i)) & 0xFF;
     assert(os.write(reinterpret_cast<char*>(&byte), 1));
   }
@@ -21,7 +21,7 @@ void write(ostream &os, const T& val_) {
 template<typename T>
 T read(istream &is) {
   typename std::make_unsigned<T>::type result = 0;
-  for (std::size_t i = sizeof(result) - 1; i >= 0; i--) {
+  for (int i = static_cast<int>(sizeof(result)) - 1; i >= 0; i--) {
     std::uint8_t byte;
     if (!is.read(reinterpret_cast<char*>(&byte), sizeof(byte))) {
       throw protocol_error("Unexpected EOF");
