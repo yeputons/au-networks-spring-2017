@@ -1,20 +1,59 @@
 #include <assert.h>
 #include <memory>
 #include <thread>
+#include <mutex>
 #include <stdexcept>
+#include <map>
 #include "protocol.h"
 #include "tcp_socket.h"
 
+std::map<t_client_id, t_balance> balances;
+std::mutex balances_mutex;
+
+t_client_id register_new_client() {
+  std::lock_guard<std::mutex> lock(balances_mutex);
+  t_client_id id = balances.size();
+  assert(!balances.count(id));
+  balances[id] = 0;
+  return id;
+}
+
+t_balance get_amount(t_client_id id) {
+  std::lock_guard<std::mutex> lock(balances_mutex);
+  auto it = balances.find(id);
+  if (it == balances.end()) {
+    throw std::runtime_error("Requested balance for an unknown client");
+  }
+  return it->second;
+}
+
+void transfer(t_client_id from, t_client_id to, t_balance amount) {
+  std::lock_guard<std::mutex> lock(balances_mutex);
+  auto it_from = balances.find(from);
+  auto it_to = balances.find(to);
+  if (it_from == balances.end() || it_to == balances.end()) {
+    throw std::runtime_error("Requested transfer for an unknown client");
+  }
+  it_from->second -= amount;
+  it_to->second += amount;
+}
+
 class ClientHandler : public MessageVisitor {
 public:
-  ClientHandler(stream_socket *sock) : sock_(sock) {}
+  ClientHandler(stream_socket *sock) : sock_(sock), client_id_(-1) {}
 
   void accept(const RegistrationMessage&) {
     std::cout << "Received RegistrationMessage()\n";
+    client_id_ = register_new_client();
+
+    RegistrationResponse resp;
+    resp.client_id = client_id_;
+    proto_send(*sock_, resp);
   }
 
   void accept(const LoginMessage &m) {
     std::cout << "Received LoginMessage(client_id=" << m.client_id << ")\n";
+    client_id_ = m.client_id;
   }
 
   void accept(const RegistrationResponse&) {
@@ -23,6 +62,10 @@ public:
 
   void accept(const BalanceInquiryRequest&) {
     std::cout << "Received BalanceInquiryRequest()\n";
+
+    BalanceInquiryResponse resp;
+    resp.balance = get_amount(client_id_);
+    proto_send(*sock_, resp);
   }
 
   void accept(const BalanceInquiryResponse&) {
@@ -33,10 +76,12 @@ public:
     std::cout << "Received TransferRequest("
               << "to=" << m.transfer_to << ", "
               << "amount=" << m.amount << ")\n";
+    transfer(client_id_, m.transfer_to, m.amount);
   }
 
 private:
   stream_socket *sock_;
+  std::uint64_t client_id_;
 };
 
 void process_client(std::unique_ptr<stream_socket> client) {
