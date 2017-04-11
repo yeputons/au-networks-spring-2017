@@ -7,14 +7,14 @@ SRCS_common=$(SRCDIR)/tcp_socket.cpp $(SRCDIR)/protocol.cpp
 SRCS_test=$(SRCS_common) $(SRCDIR)/test.cpp $(SRCDIR)/test_protocol.cpp
 SRCS_client=$(SRCS_common) $(SRCDIR)/client.cpp
 SRCS_server=$(SRCS_common) $(SRCDIR)/server.cpp
-BINDIR=.bin
+OBJDIR=.obj
 SRCDIR=src
 INCDIR=inc
 
 all: $(TARGETS)
-test: $(SRCS_test:$(SRCDIR)/%.cpp=$(BINDIR)/%.o)
-client: $(SRCS_client:$(SRCDIR)/%.cpp=$(BINDIR)/%.o)
-server: $(SRCS_server:$(SRCDIR)/%.cpp=$(BINDIR)/%.o)
+test: $(SRCS_test:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
+client: $(SRCS_client:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
+server: $(SRCS_server:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 
 CXX=g++
 CXXFLAGS=-pthread -pedantic -Wall -Wshadow -Wextra -Werror -std=c++11 -I$(INCDIR)
@@ -28,13 +28,13 @@ endif
 $(TARGETS):
 	$(CXX) -o $@ $(LDFLAGS) $^ $(LDLIBS)
 
-$(BINDIR)/%.o: $(SRCDIR)/%.cpp | $(BINDIR)
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
 	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $<
 
-$(BINDIR):
-	mkdir $(BINDIR)
+$(OBJDIR):
+	mkdir $(OBJDIR)
 
 clean:
-	rm -rf $(TARGETS) .bin
+	rm -rf $(TARGETS) $(OBJDIR)
 
-include $(wildcard $(BINDIR)/*.d)
+include $(wildcard $(OBJDIR)/*.d)
