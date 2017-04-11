@@ -35,31 +35,37 @@ void RegistrationMessage::serialize(ostream &) const {}
 void RegistrationMessage::deserialize(istream &) {}
 std::uint8_t RegistrationMessage::id() const { return 1; }
 std::size_t RegistrationMessage::serialized_size() const { return 0; }
+void RegistrationMessage::visit(MessageVisitor &v) const { v.accept(*this); }
 
 void LoginMessage::serialize(ostream &os) const { write(os, client_id); }
 void LoginMessage::deserialize(istream &is) { client_id = read<uint64_t>(is); }
 std::uint8_t LoginMessage::id() const { return 2; }
 std::size_t LoginMessage::serialized_size() const { return sizeof(uint64_t); }
+void LoginMessage::visit(MessageVisitor &v) const { v.accept(*this); }
 
 void RegistrationResponse::serialize(ostream &os) const { write(os, client_id); }
 void RegistrationResponse::deserialize(istream &is) { client_id = read<uint64_t>(is); }
 std::uint8_t RegistrationResponse::id() const { return 3; }
 std::size_t RegistrationResponse::serialized_size() const { return sizeof(uint64_t); }
+void RegistrationResponse::visit(MessageVisitor &v) const { v.accept(*this); }
 
 void BalanceInquiryRequest::serialize(ostream &) const {}
 void BalanceInquiryRequest::deserialize(istream &) {}
 std::uint8_t BalanceInquiryRequest::id() const { return 4; }
 std::size_t BalanceInquiryRequest::serialized_size() const { return 0; }
+void BalanceInquiryRequest::visit(MessageVisitor &v) const { v.accept(*this); }
 
 void BalanceInquiryResponse::serialize(ostream &os) const { write(os, balance); }
 void BalanceInquiryResponse::deserialize(istream &is) { balance = read<int64_t>(is); }
 std::uint8_t BalanceInquiryResponse::id() const { return 5; }
 std::size_t BalanceInquiryResponse::serialized_size() const { return sizeof(uint64_t); }
+void BalanceInquiryResponse::visit(MessageVisitor &v) const { v.accept(*this); }
 
 void TransferRequest::serialize(ostream &os) const { write(os, transfer_to); write(os, amount); }
 void TransferRequest::deserialize(istream &is) { transfer_to = read<uint64_t>(is); amount = read<int64_t>(is); }
 std::uint8_t TransferRequest::id() const { return 6; }
 std::size_t TransferRequest::serialized_size() const { return 2 * sizeof(uint64_t); }
+void TransferRequest::visit(MessageVisitor &v) const { v.accept(*this); }
 
 std::unique_ptr<AbstractMessage> proto_recv(stream_socket &sock) {
   std::uint8_t id;
@@ -75,7 +81,7 @@ std::unique_ptr<AbstractMessage> proto_recv(stream_socket &sock) {
   case 6: msg.reset(new TransferRequest); break;
   default:
     stringstream err_msg;
-    err_msg << "Unknown message id: " << id;
+    err_msg << "Unknown message id: " << static_cast<int>(id);
     throw protocol_error(err_msg.str());
   }
   std::vector<char> data(msg->serialized_size());
