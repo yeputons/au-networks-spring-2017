@@ -46,21 +46,21 @@ template<> void check_message<RegistrationResponse>(RegistrationResponse &msg) {
 }
 
 template<> void fill_message<BalanceInquiryResponse>(BalanceInquiryResponse &msg) {
-  msg.balance = 239017;
+  msg.balance = -239017;
 }
 
 template<> void check_message<BalanceInquiryResponse>(BalanceInquiryResponse &msg) {
-  assert(msg.balance == 239017);
+  assert(msg.balance == -239017);
 }
 
 template<> void fill_message<TransferRequest>(TransferRequest &msg) {
   msg.transfer_to = 239017;
-  msg.amount = 17239;
+  msg.amount = -17239;
 }
 
 template<> void check_message<TransferRequest>(TransferRequest &msg) {
   assert(msg.transfer_to == 239017);
-  assert(msg.amount == 17239);
+  assert(msg.amount == -17239);
 }
 
 template<typename T> void test_message() {

@@ -20,13 +20,14 @@ void write(ostream &os, const T& val_) {
 
 template<typename T>
 T read(istream &is) {
-  typename std::make_unsigned<T>::type result = 0;
+  typedef typename std::make_unsigned<T>::type UT;
+  UT result = 0;
   for (int i = static_cast<int>(sizeof(result)) - 1; i >= 0; i--) {
     std::uint8_t byte;
     if (!is.read(reinterpret_cast<char*>(&byte), sizeof(byte))) {
       throw protocol_error("Unexpected EOF");
     }
-    result |= byte << (8 * i);
+    result |= static_cast<UT>(byte) << (8 * i);
   }
   return result;
 }
@@ -38,15 +39,15 @@ std::size_t RegistrationMessage::serialized_size() const { return 0; }
 void RegistrationMessage::visit(MessageVisitor &v) const { v.accept(*this); }
 
 void LoginMessage::serialize(ostream &os) const { write(os, client_id); }
-void LoginMessage::deserialize(istream &is) { client_id = read<uint64_t>(is); }
+void LoginMessage::deserialize(istream &is) { client_id = read<t_client_id>(is); }
 std::uint8_t LoginMessage::id() const { return 2; }
-std::size_t LoginMessage::serialized_size() const { return sizeof(uint64_t); }
+std::size_t LoginMessage::serialized_size() const { return sizeof(t_client_id); }
 void LoginMessage::visit(MessageVisitor &v) const { v.accept(*this); }
 
 void RegistrationResponse::serialize(ostream &os) const { write(os, client_id); }
-void RegistrationResponse::deserialize(istream &is) { client_id = read<uint64_t>(is); }
+void RegistrationResponse::deserialize(istream &is) { client_id = read<t_client_id>(is); }
 std::uint8_t RegistrationResponse::id() const { return 3; }
-std::size_t RegistrationResponse::serialized_size() const { return sizeof(uint64_t); }
+std::size_t RegistrationResponse::serialized_size() const { return sizeof(t_client_id); }
 void RegistrationResponse::visit(MessageVisitor &v) const { v.accept(*this); }
 
 void BalanceInquiryRequest::serialize(ostream &) const {}
@@ -56,17 +57,18 @@ std::size_t BalanceInquiryRequest::serialized_size() const { return 0; }
 void BalanceInquiryRequest::visit(MessageVisitor &v) const { v.accept(*this); }
 
 void BalanceInquiryResponse::serialize(ostream &os) const { write(os, balance); }
-void BalanceInquiryResponse::deserialize(istream &is) { balance = read<int64_t>(is); }
+void BalanceInquiryResponse::deserialize(istream &is) { balance = read<t_balance>(is); }
 std::uint8_t BalanceInquiryResponse::id() const { return 5; }
-std::size_t BalanceInquiryResponse::serialized_size() const { return sizeof(uint64_t); }
+std::size_t BalanceInquiryResponse::serialized_size() const { return sizeof(t_balance); }
 void BalanceInquiryResponse::visit(MessageVisitor &v) const { v.accept(*this); }
 
 void TransferRequest::serialize(ostream &os) const { write(os, transfer_to); write(os, amount); }
-void TransferRequest::deserialize(istream &is) { transfer_to = read<uint64_t>(is); amount = read<int64_t>(is); }
+void TransferRequest::deserialize(istream &is) { transfer_to = read<t_client_id>(is); amount = read<t_balance>(is); }
 std::uint8_t TransferRequest::id() const { return 6; }
-std::size_t TransferRequest::serialized_size() const { return 2 * sizeof(uint64_t); }
+std::size_t TransferRequest::serialized_size() const { return sizeof(t_client_id) + sizeof(t_balance); }
 void TransferRequest::visit(MessageVisitor &v) const { v.accept(*this); }
 
+#include <iostream>
 std::unique_ptr<AbstractMessage> proto_recv(stream_socket &sock) {
   std::uint8_t id;
   sock.recv(&id, 1);

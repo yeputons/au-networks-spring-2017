@@ -13,6 +13,9 @@ public:
   protocol_error(const std::string &what_arg) : std::runtime_error(what_arg) {}
 };
 
+typedef std::uint64_t t_client_id;
+typedef std::int64_t t_balance;
+
 class MessageVisitor;
 
 struct AbstractMessage {
@@ -33,7 +36,7 @@ struct RegistrationMessage : public AbstractMessage {
 };
 
 struct LoginMessage : public AbstractMessage {
-  std::uint64_t client_id;
+  t_client_id client_id;
 
   void serialize(std::ostream &os) const override;
   void deserialize(std::istream &is) override;
@@ -43,7 +46,7 @@ struct LoginMessage : public AbstractMessage {
 };
 
 struct RegistrationResponse : public AbstractMessage {
-  std::uint64_t client_id;
+  t_client_id client_id;
   
   void serialize(std::ostream &os) const override;
   void deserialize(std::istream &is) override;
@@ -61,7 +64,7 @@ struct BalanceInquiryRequest : public AbstractMessage {
 };
 
 struct BalanceInquiryResponse : public AbstractMessage {
-  std::int64_t balance;
+  t_balance balance;
 
   void serialize(std::ostream &os) const override;
   void deserialize(std::istream &is) override;
@@ -71,8 +74,8 @@ struct BalanceInquiryResponse : public AbstractMessage {
 };
 
 struct TransferRequest : public AbstractMessage {
-  std::uint64_t transfer_to;
-  std::int64_t amount;
+  t_client_id transfer_to;
+  t_balance amount;
 
   void serialize(std::ostream &os) const override;
   void deserialize(std::istream &is) override;
