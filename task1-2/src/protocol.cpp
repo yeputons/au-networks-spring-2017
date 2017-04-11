@@ -83,7 +83,7 @@ std::unique_ptr<AbstractMessage> proto_recv(stream_socket &sock) {
 
   stringstream data_stream(std::string(data.begin(), data.end()));
   msg->deserialize(data_stream);
-  assert(!data_stream);
+  assert(data_stream.rdbuf()->in_avail() == 0);
   return msg;
 }
 
@@ -93,6 +93,6 @@ void proto_send(stream_socket &sock, const AbstractMessage &msg) {
   msg.serialize(data_stream);
 
   const auto &data = data_stream.str();
-  assert(data.size() == msg.serialized_size());
+  assert(data.size() == 1 + msg.serialized_size());
   sock.send(data.data(), data.size());
 }
