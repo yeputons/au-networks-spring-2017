@@ -1,8 +1,25 @@
 #include "test.h"
+#include "stream_socket.h"
 #include "protocol.h"
 #include <assert.h>
 #include <sstream>
 #include <set>
+
+class stringstream_socket : public stream_socket {
+public:
+  void send(const void *buf, size_t size) override {
+    assert(data_.write(reinterpret_cast<const char*>(buf), size));
+  }
+  void recv(void *buf, size_t size) override {
+    assert(data_.read(reinterpret_cast<char*>(buf), size));
+  }
+  const std::stringstream& data() const {
+    return data_;
+  }
+
+private:
+  std::stringstream data_;
+};
 
 std::set<std::uint8_t> ids;
 
@@ -47,18 +64,33 @@ template<> void check_message<TransferRequest>(TransferRequest &msg) {
 }
 
 template<typename T> void test_message() {
-  T msg;
-  assert(!ids.count(msg.id()));
-  ids.insert(msg.id());
-  fill_message(msg);
-
   std::stringstream sstr;
-  msg.serialize(sstr);
-  assert(sstr.str().size() == msg.serialized_size());
+  stringstream_socket sock;
 
-  T msg_out;
-  msg_out.deserialize(sstr);
-  check_message(msg_out);
+  {
+    T msg;
+    assert(!ids.count(msg.id()));
+    ids.insert(msg.id());
+    fill_message(msg);
+
+    msg.serialize(sstr);
+    assert(sstr.str().size() == msg.serialized_size());
+
+    proto_send(sock, msg);
+  }
+
+  {
+    T msg_out;
+    msg_out.deserialize(sstr);
+    assert(sstr.rdbuf()->in_avail() == 0);
+    check_message(msg_out);
+  }
+  {
+    auto msg_out_ptr = proto_recv(sock);
+    assert(sock.data().rdbuf()->in_avail() == 0);
+    T &msg_out = dynamic_cast<T&>(*msg_out_ptr);
+    check_message(msg_out);
+  }
 }
 
 void test_protocol() {
