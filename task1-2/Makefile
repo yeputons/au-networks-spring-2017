@@ -4,7 +4,7 @@
 
 TARGETS=test client server
 SRCS_common=$(SRCDIR)/tcp_socket.cpp $(SRCDIR)/protocol.cpp
-SRCS_test=$(SRCS_common) $(SRCDIR)/test.cpp
+SRCS_test=$(SRCS_common) $(SRCDIR)/test.cpp $(SRCDIR)/test_protocol.cpp
 SRCS_client=$(SRCS_common) $(SRCDIR)/client.cpp
 SRCS_server=$(SRCS_common) $(SRCDIR)/server.cpp
 BINDIR=.bin

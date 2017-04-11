@@ -16,6 +16,7 @@
 #ifdef TEST_AU_STREAM_SOCKET
 #include "au_stream_socket.h"
 #endif
+#include "test.h"
 
 const char *TEST_ADDR = "localhost";
 #ifdef TEST_TCP_STREAM_SOCKET
@@ -127,6 +128,7 @@ static void test_au_stream_sockets()
 
 int main()
 {
+    test_protocol();
     #ifdef TEST_TCP_STREAM_SOCKET
     test_tcp_stream_sockets();
     #endif
