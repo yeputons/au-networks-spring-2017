@@ -43,7 +43,7 @@ public:
   ClientHandler(stream_socket *sock) : sock_(sock), client_id_(-1) {}
 
   void accept(const RegistrationMessage&) {
-    std::cout << "Received RegistrationMessage()\n";
+    std::cout << "Received RegistrationMessage()" << std::endl;
     client_id_ = register_new_client();
 
     RegistrationResponse resp;
@@ -52,7 +52,7 @@ public:
   }
 
   void accept(const LoginMessage &m) {
-    std::cout << "Received LoginMessage(client_id=" << m.client_id << ")\n";
+    std::cout << "Received LoginMessage(client_id=" << m.client_id << ")" << std::endl;
     client_id_ = m.client_id;
   }
 
@@ -61,7 +61,7 @@ public:
   }
 
   void accept(const BalanceInquiryRequest&) {
-    std::cout << "Received BalanceInquiryRequest()\n";
+    std::cout << "Received BalanceInquiryRequest()" << std::endl;
 
     BalanceInquiryResponse resp;
     resp.balance = get_amount(client_id_);
@@ -75,7 +75,7 @@ public:
   void accept(const TransferRequest &m) {
     std::cout << "Received TransferRequest("
               << "to=" << m.transfer_to << ", "
-              << "amount=" << m.amount << ")\n";
+              << "amount=" << m.amount << ")" << std::endl;
     transfer(client_id_, m.transfer_to, m.amount);
   }
 
@@ -91,7 +91,7 @@ void process_client(std::unique_ptr<stream_socket> client) {
       std::unique_ptr<AbstractMessage> msg_gen = proto_recv(*client);
       msg_gen->visit(handler);
     } catch (const std::exception &e) {
-      std::cout << "Exception caught while processing client: " << e.what() << "\n";
+      std::cout << "Exception caught while processing client: " << e.what() << std::endl;
       break;
     }
   }
@@ -109,18 +109,18 @@ int main(int argc, char* argv[]) {
   }
 
   try {
-    std::cout << "Trying to listen on " << host << ":" << port << "...\n";
+    std::cout << "Trying to listen on " << host << ":" << port << "..." << std::endl;
     tcp_server_socket server(host.c_str(), port);
-    std::cout << "Listening...\n";
+    std::cout << "Listening..." << std::endl;
 
     for (;;) {
       std::unique_ptr<stream_socket> client(server.accept_one_client());
-      std::cout << "New client\n";
+      std::cout << "New client" << std::endl;
       std::thread th(process_client, std::move(client));
       th.detach();
     }
   } catch (const std::exception &e) {
-    std::cout << "Exception caught in the main loop: " << e.what() << "\n";
+    std::cout << "Exception caught in the main loop: " << e.what() << std::endl;
     return 1;
   }
   return 0;
