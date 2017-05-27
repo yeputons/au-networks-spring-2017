@@ -54,6 +54,7 @@ public:
   void accept(const LoginMessage &m) {
     std::cout << "Received LoginMessage(client_id=" << m.client_id << ")" << std::endl;
     client_id_ = m.client_id;
+    get_amount(client_id_);  // Check that client exists.
     proto_send(*sock_, OperationSucceeded());
   }
 
