@@ -1,78 +1,6 @@
-#include <assert.h>
-#include <memory.h>
 #include <sstream>
 #include "tcp_socket.h"
-#ifdef _WIN32
-#include <w32api.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <unistd.h>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#endif
-
-#ifdef _WIN32
-// INVALID_SOCKET is already defined
-// SOCKET_ERROR is already defined
-#else
-static const int INVALID_SOCKET = -1;
-static const int SOCKET_ERROR = -1;
-#define closesocket close
-#endif
-
-#ifdef _WIN32
-class WSAStartupper {
-public:
-  WSAStartupper() {
-    WSADATA data;
-    assert(WSAStartup(MAKEWORD(2, 2), &data) == 0);
-  }
-  // We do not call WSACleanup() because of troubles with order of global ctors/dtors.
-private:
-  WSAStartupper(WSAStartupper &&) = delete;
-  WSAStartupper(const WSAStartupper&) = delete;
-  WSAStartupper& operator=(WSAStartupper) = delete;
-};
-#endif
-
-std::string get_socket_error(int code) {
-  #ifdef _WIN32
-  LPVOID msg_buf;
-  assert(FormatMessage(
-      FORMAT_MESSAGE_ALLOCATE_BUFFER |
-      FORMAT_MESSAGE_FROM_SYSTEM |
-      FORMAT_MESSAGE_IGNORE_INSERTS,
-      NULL,
-      code,
-      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-      (LPTSTR)&msg_buf,
-      0, NULL) != 0);
-  std::string result((char*)msg_buf);
-  LocalFree(msg_buf);
-  return result;
-  #else
-  return strerror(code);
-  #endif
-}
-std::string get_socket_error() {
-  #ifdef _WIN32
-  return get_socket_error(WSAGetLastError());
-  #else
-  return get_socket_error(errno);
-  #endif
-}
-
-template<typename T>
-void ensure_or_throw_impl(bool condition, const char *errname, const char *funname, const char *file, int line, const char *cond) {
-  if (!condition) {
-    std::stringstream msg;
-    msg << errname << " in " << funname << "() at " << file << ":" << line << ": condition " << cond << " failed: " << get_socket_error();
-    throw T(msg.str());
-  }
-}
-#define ensure_or_throw(cond, error) ensure_or_throw_impl<error>(cond, #error, __FUNCTION__, __FILE__, __LINE__, #cond)
+#include "common_socket_impl.h"
 
 tcp_connection_socket::tcp_connection_socket() : sock_(INVALID_SOCKET) {}
 
@@ -160,9 +88,7 @@ private:
 };
 
 void tcp_client_socket::connect() {
-  #ifdef _WIN32
-  static WSAStartupper wsa_startupper_;
-  #endif
+  SOCKET_STARTUP();
 
   NameResolver resolver(host_.c_str(), port_);
   SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -177,9 +103,7 @@ void tcp_client_socket::connect() {
 }
 
 tcp_server_socket::tcp_server_socket(hostname host, tcp_port port) {
-  #ifdef _WIN32
-  static WSAStartupper wsa_startupper_;
-  #endif
+  SOCKET_STARTUP();
 
   NameResolver resolver(host, port);
   sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
