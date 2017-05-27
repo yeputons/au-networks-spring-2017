@@ -97,7 +97,11 @@ tcp_connection_socket::~tcp_connection_socket() {
 void tcp_connection_socket::send(const void *buf, size_t size) {
   ensure_or_throw(sock_ != INVALID_SOCKET, socket_uninitialized);
   for (size_t i = 0; i < size;) {
-    int sent = ::send(sock_, static_cast<const char*>(buf) + i, size - i, 0);
+    int flags = 0;
+    #ifdef __linux__
+    flags |= MSG_NOSIGNAL;
+    #endif
+    int sent = ::send(sock_, static_cast<const char*>(buf) + i, size - i, flags);
     ensure_or_throw(sent != SOCKET_ERROR, socket_io_error);
     i += sent;
   }
