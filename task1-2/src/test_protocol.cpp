@@ -101,4 +101,5 @@ void test_protocol() {
   test_message<BalanceInquiryRequest>();
   test_message<BalanceInquiryResponse>();
   test_message<TransferRequest>();
+  test_message<OperationSucceeded>();
 }
