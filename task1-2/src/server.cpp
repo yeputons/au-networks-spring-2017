@@ -54,6 +54,7 @@ public:
   void accept(const LoginMessage &m) {
     std::cout << "Received LoginMessage(client_id=" << m.client_id << ")" << std::endl;
     client_id_ = m.client_id;
+    proto_send(*sock_, OperationSucceeded());
   }
 
   void accept(const RegistrationResponse&) {
@@ -77,6 +78,11 @@ public:
               << "to=" << m.transfer_to << ", "
               << "amount=" << m.amount << ")" << std::endl;
     transfer(client_id_, m.transfer_to, m.amount);
+    proto_send(*sock_, OperationSucceeded());
+  }
+
+  void accept(const OperationSucceeded&) {
+    throw std::runtime_error("Unexpected OperationSucceeded");
   }
 
 private:

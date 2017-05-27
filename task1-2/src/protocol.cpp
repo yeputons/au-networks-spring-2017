@@ -68,6 +68,12 @@ std::uint8_t TransferRequest::id() const { return 6; }
 std::size_t TransferRequest::serialized_size() const { return sizeof(t_client_id) + sizeof(t_balance); }
 void TransferRequest::visit(MessageVisitor &v) const { v.accept(*this); }
 
+void OperationSucceeded::serialize(ostream &) const {}
+void OperationSucceeded::deserialize(istream &) {}
+std::uint8_t OperationSucceeded::id() const { return 7; }
+std::size_t OperationSucceeded::serialized_size() const { return 0; }
+void OperationSucceeded::visit(MessageVisitor &v) const { v.accept(*this); }
+
 #include <iostream>
 std::unique_ptr<AbstractMessage> proto_recv(stream_socket &sock) {
   std::uint8_t id;
@@ -81,6 +87,7 @@ std::unique_ptr<AbstractMessage> proto_recv(stream_socket &sock) {
   case 4: msg.reset(new BalanceInquiryRequest); break;
   case 5: msg.reset(new BalanceInquiryResponse); break;
   case 6: msg.reset(new TransferRequest); break;
+  case 7: msg.reset(new OperationSucceeded); break;
   default:
     stringstream err_msg;
     err_msg << "Unknown message id: " << static_cast<int>(id);

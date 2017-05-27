@@ -84,6 +84,14 @@ struct TransferRequest : public AbstractMessage {
   void visit(MessageVisitor&) const override;
 };
 
+struct OperationSucceeded : public AbstractMessage {
+  void serialize(std::ostream &os) const override;
+  void deserialize(std::istream &is) override;
+  std::uint8_t id() const override;
+  std::size_t serialized_size() const override;
+  void visit(MessageVisitor&) const override;
+};
+
 struct MessageVisitor {
   virtual ~MessageVisitor() {};
   virtual void accept(const RegistrationMessage&) = 0;
@@ -92,6 +100,7 @@ struct MessageVisitor {
   virtual void accept(const BalanceInquiryRequest&) = 0;
   virtual void accept(const BalanceInquiryResponse&) = 0;
   virtual void accept(const TransferRequest&) = 0;
+  virtual void accept(const OperationSucceeded&) = 0;
 };
 
 std::unique_ptr<AbstractMessage> proto_recv(stream_socket &sock);

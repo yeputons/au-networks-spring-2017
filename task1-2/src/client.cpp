@@ -13,6 +13,13 @@ void help() {
             << "  transfer <id> <amount> - transfer <amount> to another client <id>" << std::endl;
 }
 
+void wait_confirmation(stream_client_socket &sock) {
+  std::cout << "Waiting for confirmation..." << std::endl;
+  auto response = proto_recv(sock);
+  dynamic_cast<OperationSucceeded&>(*response);
+  std::cout << "Confirmed." << std::endl;
+}
+
 void do_register(stream_client_socket &sock) {
   proto_send(sock, RegistrationMessage());
   auto msg_ptr = proto_recv(sock);
@@ -24,6 +31,7 @@ void do_login(stream_client_socket &sock) {
   LoginMessage msg;
   assert(std::cin >> msg.client_id);
   proto_send(sock, msg);
+  wait_confirmation(sock);
 }
 
 void do_balance(stream_client_socket &sock) {
@@ -38,6 +46,7 @@ void do_transfer(stream_client_socket &sock) {
   assert(std::cin >> msg.transfer_to);
   assert(std::cin >> msg.amount);
   proto_send(sock, msg);
+  wait_confirmation(sock);
 }
 
 void work(stream_client_socket &sock) {
