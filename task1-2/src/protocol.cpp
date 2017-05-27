@@ -89,7 +89,8 @@ std::unique_ptr<AbstractMessage> proto_recv(stream_socket &sock) {
   std::vector<char> data(msg->serialized_size());
   sock.recv(data.data(), data.size());
 
-  stringstream data_stream(std::string(data.begin(), data.end()));
+  stringstream data_stream;
+  data_stream.rdbuf()->pubsetbuf(&data[0], data.size());
   msg->deserialize(data_stream);
   assert(data_stream.rdbuf()->in_avail() == 0);
   return msg;
