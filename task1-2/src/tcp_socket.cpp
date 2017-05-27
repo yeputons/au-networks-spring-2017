@@ -201,7 +201,27 @@ stream_socket* tcp_server_socket::accept_one_client() {
   ensure_or_throw(sock_ != INVALID_SOCKET, socket_uninitialized);
   sockaddr addr;
   socklen_t addrlen = sizeof(addr);
-  SOCKET client = accept(sock_, &addr, &addrlen);
+  SOCKET client = INVALID_SOCKET;
+  for (int retry = 0; retry < 3; retry++) {
+    client = accept(sock_, &addr, &addrlen);
+    if (client != INVALID_SOCKET) {
+      break;
+    }
+    #ifdef __linux__
+    if (errno == EAGAIN ||
+        errno == ENETDOWN ||
+        errno == EPROTO ||
+        errno == ENOPROTOOPT ||
+        errno == EHOSTDOWN ||
+        errno == ENONET ||
+        errno == EHOSTUNREACH ||
+        errno == EOPNOTSUPP ||
+        errno == ENETUNREACH) {
+      continue;  // Retry
+    }
+    #endif
+    break;
+  }
   ensure_or_throw(client != INVALID_SOCKET, socket_error);
   try {
     return new tcp_connection_socket(client);
