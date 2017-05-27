@@ -183,6 +183,8 @@ tcp_server_socket::tcp_server_socket(hostname host, tcp_port port) {
 
   NameResolver resolver(host, port);
   sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  int reuse_addr = 1;
+  ensure_or_throw(setsockopt(sock_, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof reuse_addr) == 0, socket_error);
   ensure_or_throw(sock_ != INVALID_SOCKET, socket_error);
   try {
     ensure_or_throw(::bind(sock_, resolver.ai_addr(), resolver.ai_addrlen()) == 0, socket_error);
