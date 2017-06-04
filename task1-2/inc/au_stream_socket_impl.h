@@ -15,6 +15,8 @@ namespace au_stream_socket {
 
 const int IPPROTO_AU = 151;
 
+struct au_packet;
+
 class messages_broker {
 public:
   static messages_broker& get() {
@@ -35,6 +37,8 @@ private:
     thread_.detach();
   }
 
+  void process_packet(const au_packet &packet);
+
   std::thread thread_;
   std::mutex mutex_;
   addr_map<std::shared_ptr<listener_impl>> listeners_;
@@ -48,8 +52,7 @@ public:
   sockaddr_in get_addr() const;
   void shutdown();
 
-  void process_packet(const char *data, size_t len);
-
+  void add_client(std::shared_ptr<connection_impl> conn);
   std::shared_ptr<connection_impl> accept_one_client();
 
 private:
@@ -61,13 +64,20 @@ private:
   std::queue<std::shared_ptr<connection_impl>> clients_;
 };
 
+enum connection_state {
+  CLOSED,
+  SYN_SENT,
+  SYN_RECV,
+  ESTABLISHED
+};
+
 class connection_impl {
 public:
   connection_impl(sockaddr_in local, sockaddr_in remote);
   sockaddr_in get_local() const;
   sockaddr_in get_remote() const;
 
-  void process_packet(const char *data, size_t len);
+  void process_packet(const au_packet &packet);
 
   void start_connection();
   size_t send(const char *buf, size_t size);
@@ -75,7 +85,12 @@ public:
   void shutdown();
 
 private:
+  void send_packet(Flags flags, const std::vector<bool> data);
+
+  SOCKET sock_;
   sockaddr_in local_, remote_;
+  connection_state state_;
+  uint32_t send_sn, recv_sn;
 };
 
 }  // namespace au_stream_socket

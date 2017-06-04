@@ -14,6 +14,7 @@
 #endif
 #include <string>
 #include <sstream>
+#include <iostream>
 
 #ifdef _WIN32
 // INVALID_SOCKET is already defined
@@ -67,5 +68,9 @@ public:
 private:
   addrinfo *addrs;
 };
+
+inline std::ostream& operator<<(std::ostream &os, const sockaddr_in &addr) {
+  return os << inet_ntoa(addr.sin_addr) << ":" << ntohs(addr.sin_port);
+}
 
 #endif

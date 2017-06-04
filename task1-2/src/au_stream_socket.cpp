@@ -10,12 +10,16 @@
 
 using au_stream_socket::messages_broker;
 
+namespace {
+
 sockaddr_in resolve(hostname host, int port) {
   NameResolver resolver(host, AF_INET, SOCK_STREAM, 0, port);
   assert(resolver.ai_addrlen() == sizeof(sockaddr_in));
   const sockaddr_in *addr = reinterpret_cast<const sockaddr_in*>(resolver.ai_addr());
   return *addr;
 }
+
+}  // namespace
 
 void au_stream_connection_socket::send(const void *orig_buf, size_t size) {
   if (!impl_) {

@@ -1,6 +1,7 @@
 #ifndef AU_STREAM_ADDR_MAP_
 #define AU_STREAM_ADDR_MAP_
 
+#include <iostream>
 namespace au_stream_socket {
 
 struct sockaddr_in_cmp {
@@ -45,14 +46,19 @@ public:
   iterator find(sockaddr_in addr) {
     assert(addr.sin_family == AF_INET);
     auto it = data_.lower_bound(addr);
-    if (it == data_.end() || it->first.sin_port != addr.sin_port) {
-      return data_.end();
-    }
-    if (it->first.sin_addr.s_addr == 0 || addr.sin_addr.s_addr == 0) {
+    if (it != data_.end() && it->first.sin_port == addr.sin_port &&
+        (it->first.sin_addr.s_addr == 0 || it->first.sin_addr.s_addr == addr.sin_addr.s_addr)) {
       return it;
-    } else {
-      return data_.end();
     }
+    if (addr.sin_addr.s_addr != 0) {
+      sockaddr_in to_find = addr;
+      to_find.sin_addr.s_addr = 0;
+      it = data_.find(to_find);
+      if (it != data_.end()) {
+        return it;
+      }
+    }
+    return data_.end();
   }
 
 private:

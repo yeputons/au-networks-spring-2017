@@ -1,6 +1,9 @@
 #include "au_stream_socket_impl.h"
+#include "au_stream_socket_protocol.h"
 #include <iostream>
 #include <string.h>
+#include <stdexcept>
+#include <vector>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -52,11 +55,23 @@ void messages_broker::run() {
   for (;;) {
     sockaddr_in from;
     socklen_t fromlen = sizeof from;
-    std::cerr << "recvfrom\n";
     int size = recvfrom(s, buffer, sizeof buffer, 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
     ensure_or_throw(size > 0, socket_io_error);
 
-    std::cerr << "size=" << size << "\n";
+    assert(size >= 20);
+    int ihl = buffer[0] & 0x0F;
+    assert(size >= 4 * ihl);
+
+    sockaddr_in to;
+    memset(&to, 0, sizeof to);
+    to.sin_family = AF_INET;
+    to.sin_addr.s_addr = *reinterpret_cast<uint32_t*>(buffer + 16);
+
+    try {
+      process_packet(deserialize(from, to, buffer + ihl * 4, size - ihl * 4));
+    } catch (const invalid_packet &e) {
+      std::cerr << "Invalid packet: " << e.what() << "\n";
+    }
   }
 }
 
@@ -79,6 +94,12 @@ void listener_impl::shutdown() {
   accept_wakeup_.notify_all();
 }
 
+void listener_impl::add_client(std::shared_ptr<connection_impl> conn) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  clients_.push(conn);
+  accept_wakeup_.notify_one();
+}
+
 std::shared_ptr<connection_impl> listener_impl::accept_one_client() {
   std::unique_lock<std::mutex> lock(mutex_);
   accept_wakeup_.wait(lock, [this]() {
@@ -93,47 +114,12 @@ std::shared_ptr<connection_impl> listener_impl::accept_one_client() {
   throw socket_error("Listening socket was shut down");
 }
 
-connection_impl::connection_impl(sockaddr_in local, sockaddr_in remote)
-  : local_(local), remote_(remote) {
-}
-
 sockaddr_in connection_impl::get_local() const {
   return local_;
 }
 
 sockaddr_in connection_impl::get_remote() const {
   return remote_;
-}
-
-void connection_impl::start_connection() {
-  std::cerr << "start_connection\n";
-  SOCKET_STARTUP();
-  SOCKET s = socket(AF_INET, SOCK_RAW, IPPROTO_AU);
-  ensure_or_throw(s != INVALID_SOCKET, socket_error);
-
-  ensure_or_throw(bind(s, reinterpret_cast<sockaddr*>(&local_), sizeof(local_)) == 0, socket_error);
-
-  char data[] = { 10, 20, 30, 40, 41 };
-  ensure_or_throw(sendto(s, data, sizeof data, 0, reinterpret_cast<sockaddr*>(&remote_), sizeof(remote_)) == (sizeof data), socket_io_error);
-  // TODO
-}
-
-size_t connection_impl::send(const char *buf, size_t size) {
-  // TODO
-  (void)buf;
-  (void)size;
-  for(;;);
-}
-
-size_t connection_impl::recv(char *buf, size_t size) {
-  // TODO
-  (void)buf;
-  (void)size;
-  for(;;);
-}
-
-void connection_impl::shutdown() {
-  // TODO
 }
 
 }  // namespace au_stream_socket
