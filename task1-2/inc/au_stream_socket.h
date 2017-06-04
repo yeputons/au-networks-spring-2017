@@ -8,23 +8,27 @@
 
 typedef uint16_t au_stream_port;
 
-class au_stream_socket_data;
+namespace au_stream_socket {
+class connection_impl;
+class listener_impl;
+}
 
 class au_stream_connection_socket : public stream_socket {
 public:
   au_stream_connection_socket() {}
+  au_stream_connection_socket(std::shared_ptr<au_stream_socket::connection_impl> impl) : impl_(impl) {}
   au_stream_connection_socket(au_stream_connection_socket &&other) = default;
   au_stream_connection_socket& operator=(au_stream_connection_socket &&other) = default;
   ~au_stream_connection_socket() override;
 
-  bool bind(au_stream_port port);
+  explicit operator bool();
   void send(const void *buf, size_t size) override;
   void recv(void *buf, size_t size) override;
 
 private:
   au_stream_connection_socket(const au_stream_connection_socket &) = delete;
 
-  std::weak_ptr<au_stream_socket_data> impl_;
+  std::shared_ptr<au_stream_socket::connection_impl> impl_;
 };
 
 class au_stream_client_socket : public stream_client_socket {
@@ -33,8 +37,8 @@ public:
   ~au_stream_client_socket() override {};
 
   void connect() override;
-  void send(const void *buf, size_t size) override { sock_.send(buf, size); }
-  void recv(void *buf, size_t size) override { sock_.recv(buf, size); }
+  void send(const void *buf, size_t size) override;
+  void recv(void *buf, size_t size) override;
 
 private:
   std::string host_;
@@ -54,7 +58,7 @@ public:
 private:
   au_stream_server_socket(const au_stream_server_socket &) = delete;
 
-  std::weak_ptr<au_stream_socket_data> impl_;
+  std::shared_ptr<au_stream_socket::listener_impl> impl_;
 };
 
 typedef const char* hostname;

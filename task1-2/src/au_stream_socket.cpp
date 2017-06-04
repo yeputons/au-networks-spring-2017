@@ -5,126 +5,103 @@
 
 #include "au_stream_socket.h"
 #include "common_socket_impl.h"
+#include "au_stream_socket_impl.h"
 
-class au_stream_socket_processor {
-public:
-  static au_stream_socket_processor& get() {
-    static au_stream_socket_processor p;
-    return p;
-  }
+using au_stream_socket::messages_broker;
 
-  void run();
-
-  std::shared_ptr<au_stream_socket_data> socket(au_stream_port port);
-  void closesocket(std::shared_ptr<au_stream_socket_data> sock);
-
-private:
-  au_stream_socket_processor() : thread_(au_stream_socket_processor::run, this) {
-  }
-  ~au_stream_socket_processor() {
-    assert(false);
-  }
-
-  std::thread thread_;
-  std::mutex mutex_;
-  std::map<au_stream_port, std::shared_ptr<au_stream_socket_data>> sockets_;
-};
-
-class au_stream_socket_data {
-public:
-  au_stream_socket_data(au_stream_port port) : port_(port) {}
-
-  au_stream_port get_port() const {
-    return port_;
-  }
-
-private:
-  au_stream_port port_;
-};
-
-void au_stream_socket_processor::run() {
-  // TODO: actually do something
+sockaddr_in resolve(hostname host, int port) {
+  NameResolver resolver(host, AF_INET, SOCK_STREAM, au_stream_socket::IPPROTO_AU, port);
+  assert(resolver.ai_addrlen() == sizeof(sockaddr_in));
+  const sockaddr_in *addr = reinterpret_cast<const sockaddr_in*>(resolver.ai_addr());
+  return *addr;
 }
 
-std::shared_ptr<au_stream_socket_data> au_stream_socket_processor::socket(au_stream_port port) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  assert(port != 0);
-
-  auto it = sockets_.lower_bound(port);
-  if (it != sockets_.end() && it->first == port) {
-    std::stringstream msg;
-    msg << "Someone is already bound to port " << port;
-    throw socket_error(msg.str().c_str());
+void au_stream_connection_socket::send(const void *orig_buf, size_t size) {
+  if (!impl_) {
+    throw socket_uninitialized("Socket is uninitialized");
   }
-
-  auto impl = std::make_shared<au_stream_socket_data>(port);
-  sockets_.emplace(port, impl);
-  return impl;
+  const char *cbuf = static_cast<const char*>(orig_buf);
+  while (size > 0) {
+    size_t wrote = impl_->send(cbuf, size);
+    if (!wrote) {
+      throw std::logic_error("send() returned zero instead of blocking");
+    }
+    cbuf += wrote;
+    size -= wrote;
+  }
 }
 
-void au_stream_socket_processor::closesocket(std::shared_ptr<au_stream_socket_data> sock) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  auto it = sockets_.find(sock->get_port());
-  if (it == sockets_.end() || it->second != sock) {
-    return;
+void au_stream_connection_socket::recv(void *orig_buf, size_t size) {
+  if (!impl_) {
+    throw socket_uninitialized("Socket is uninitialized");
   }
-  // TODO: gracefully close the socket
-  sockets_.erase(it);
+  char *cbuf = static_cast<char*>(orig_buf);
+  while (size > 0) {
+    size_t read = impl_->recv(cbuf, size);
+    if (!read) {
+      throw std::logic_error("recv() returned zero instead of blocking");
+    }
+    cbuf += read;
+    size -= read;
+  }
+}
+
+au_stream_connection_socket::operator bool() {
+  return static_cast<bool>(impl_);
 }
 
 au_stream_connection_socket::~au_stream_connection_socket() {
-  auto impl = impl_.lock();
-  if (impl) {
-    au_stream_socket_processor::get().closesocket(impl);
+  if (impl_) {
+    impl_->shutdown();
   }
-}
-
-bool au_stream_connection_socket::bind(au_stream_port port) {
-  auto impl = impl_.lock();
-  if (impl) {
-    return false;
-  }
-  impl_ = au_stream_socket_processor::get().socket(port);
-  return true;
-}
-
-void au_stream_connection_socket::send(const void *buf, size_t size) {
-  auto impl = impl_.lock();
-  // TODO: actually send
-  (void)buf;
-  (void)size;
-}
-void au_stream_connection_socket::recv(void *buf, size_t size) {
-  auto impl = impl_.lock();
-  // TODO: actually recv
-  (void)buf;
-  (void)size;
 }
 
 au_stream_client_socket::au_stream_client_socket(hostname host, au_stream_port client_port, au_stream_port server_port)
   : host_(host)
   , client_port_(client_port)
-  , server_port_(server_port) {}
+  , server_port_(server_port) {
+}
 
 void au_stream_client_socket::connect() {
-  sock_.bind(client_port_);
-  // TODO: actually connect
+  if (sock_) {
+    // Ignore, already connected
+    return;
+  }
+
+  sockaddr_in local_addr;
+  memset(&local_addr, 0, sizeof local_addr);
+  local_addr.sin_family = AF_INET;
+  local_addr.sin_port = htons(client_port_);
+
+  auto impl = std::make_shared<au_stream_socket::connection_impl>(local_addr, resolve(host_.c_str(), server_port_));
+  messages_broker::get().add_connection(impl);
+  impl->start_connection();
+  sock_ = au_stream_connection_socket(impl);
+}
+
+void au_stream_client_socket::send(const void *buf, size_t size) {
+  if (!sock_) {
+    throw socket_uninitialized("Socket is not connected");
+  }
+  sock_.send(buf, size);
+}
+
+void au_stream_client_socket::recv(void *buf, size_t size) {
+  if (!sock_) {
+    throw socket_uninitialized("Socket is not connected");
+  }
+  sock_.recv(buf, size);
 }
 
 au_stream_server_socket::au_stream_server_socket(hostname host, au_stream_port port)
-  : impl_(au_stream_socket_processor::get().socket(port)) {
-  // TODO: start listening
-  (void)host;
+    : impl_(std::make_shared<au_stream_socket::listener_impl>(resolve(host, port))) {
+  messages_broker::get().start_listen(impl_);
 }
 
 au_stream_server_socket::~au_stream_server_socket() {
-  auto impl = impl_.lock();
-  if (impl) {
-    au_stream_socket_processor::get().closesocket(impl);
-  }
+  impl_->shutdown();
 }
 
 stream_socket* au_stream_server_socket::accept_one_client() {
-  // TODO: actually accept
-  assert(false);
+  return new au_stream_connection_socket(impl_->accept_one_client());
 }
