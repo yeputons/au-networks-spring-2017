@@ -21,7 +21,7 @@ bin/server32: $(SRCS_server:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o32)
 bin/server: $(SRCS_server:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o64)
 
 CXX=g++
-CXXFLAGS=-pthread -pedantic -Wall -Wshadow -Wextra -Werror -std=c++11 -I$(INCDIR)
+CXXFLAGS=-pthread -pedantic -Wall -Wshadow -Wextra -Werror -std=c++11 -I$(INCDIR) -g
 LDFLAGS=-pthread
 LDLIBS=
 ifeq ($(OS),Windows_NT)
