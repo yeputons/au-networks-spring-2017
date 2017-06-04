@@ -110,13 +110,14 @@ connection_impl::connection_impl(sockaddr_in local, sockaddr_in remote)
   ensure_or_throw(bind(sock_, reinterpret_cast<sockaddr*>(&local_), sizeof(local_)) == 0, socket_error);
 }
 
-void connection_impl::send_packet(Flags flags, const std::vector<bool> data) {
+void connection_impl::send_packet(Flags flags, const std::vector<char> data) {
   au_packet ans;
   ans.source = local_;
   ans.dest = remote_;
   ans.flags = flags;
   ans.sn = send_sn;
   ans.ack_sn = recv_sn;
+  ans.data = std::move(data);
 
   static thread_local char buf[20 + MAX_SEGMENT_SIZE];
   int len = serialize(ans, buf, sizeof buf);
@@ -124,6 +125,7 @@ void connection_impl::send_packet(Flags flags, const std::vector<bool> data) {
 }
 
 void connection_impl::start_connection() {
+  std::lock_guard<std::mutex> lock(mutex_);
   assert(state_ == CLOSED);
 
   send_packet(Flags::SYN, {});
@@ -132,11 +134,12 @@ void connection_impl::start_connection() {
 }
 
 void connection_impl::process_packet(const au_packet &packet) {
+  std::lock_guard<std::mutex> lock(mutex_);
   if (state_ == CLOSED && packet.flags == Flags::SYN) {
     recv_sn = packet.sn + 1;
     send_packet(Flags::SYN | Flags::ACK, {});
     state_ = SYN_RECV;
-    std::cerr << "Switch CLOSED --> SYN_SENT\n";
+    std::cerr << "Switch CLOSED --> SYN_RECV\n";
   } else if (state_ == SYN_SENT && packet.flags == (Flags::SYN | Flags::ACK)) {
     if (send_sn + 1 != packet.ack_sn) {
       return;  // Fail

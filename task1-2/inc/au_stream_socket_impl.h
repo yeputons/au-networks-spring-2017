@@ -10,6 +10,7 @@
 #include "au_stream_socket.h"
 #include "common_socket_impl.h"
 #include "au_stream_addr_map.h"
+#include "au_stream_socket_protocol.h"
 
 namespace au_stream_socket {
 
@@ -85,12 +86,13 @@ public:
   void shutdown();
 
 private:
-  void send_packet(Flags flags, const std::vector<bool> data);
+  void send_packet(Flags flags, const std::vector<char> data);
 
   SOCKET sock_;
   sockaddr_in local_, remote_;
   connection_state state_;
   uint32_t send_sn, recv_sn;
+  std::mutex mutex_;
 };
 
 }  // namespace au_stream_socket

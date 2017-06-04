@@ -4,12 +4,7 @@
 #include <stdint.h>
 #include <string>
 #include "stream_socket.h"
-
-#ifdef _WIN32
-#include <winsock2.h>
-#else
-typedef int SOCKET;
-#endif
+#include "common_socket_impl.h"
 
 typedef uint16_t tcp_port;
 

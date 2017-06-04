@@ -11,6 +11,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <arpa/inet.h>
 #endif
 #include <string>
 #include <sstream>
@@ -20,6 +21,7 @@
 // INVALID_SOCKET is already defined
 // SOCKET_ERROR is already defined
 #else
+typedef int SOCKET;
 static const int INVALID_SOCKET = -1;
 static const int SOCKET_ERROR = -1;
 #define closesocket close

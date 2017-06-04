@@ -5,12 +5,6 @@
 #include <stdexcept>
 #include <vector>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#else
-typedef int SOCKET;
-#endif
-
 namespace au_stream_socket {
 
 void messages_broker::start_listen(std::shared_ptr<listener_impl> sock) {
