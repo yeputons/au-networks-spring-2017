@@ -1,4 +1,5 @@
 #ifndef COMMON_SOCKET_IMPL_H_
+#define COMMON_SOCKET_IMPL_H_
 
 #include <assert.h>
 #ifdef _WIN32
