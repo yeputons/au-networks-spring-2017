@@ -1,4 +1,5 @@
 #include "common_socket_impl.h"
+#include "stream_socket.h"
 #include <sstream>
 #include <string>
 
@@ -28,4 +29,31 @@ std::string get_socket_error() {
   #else
   return get_socket_error(errno);
   #endif
+}
+
+
+NameResolver::NameResolver(const char *host, int ai_family, int ai_socktype, int ai_protocol, int port) {
+  addrinfo hints;
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = ai_family;
+  hints.ai_socktype = ai_socktype;
+  hints.ai_protocol = ai_protocol;
+
+  std::stringstream port_str;  // to_string in unavailable in MinGW.
+  port_str << port;
+  int result = getaddrinfo(host, port ? port_str.str().c_str() : nullptr, &hints, &addrs);
+  if (result != 0) {
+    std::stringstream msg;
+    msg << "Unable to resolve host '" << host << "': " << get_socket_error(result);
+    throw host_resolve_error(msg.str());
+  }
+  if (addrs == nullptr) {
+    std::stringstream msg;
+    msg << "Unable to resolve host '" << host << "': no matching host found";
+    throw host_resolve_error(msg.str());
+  }
+}
+
+NameResolver::~NameResolver() {
+  freeaddrinfo(addrs);
 }

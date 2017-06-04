@@ -47,50 +47,10 @@ void tcp_connection_socket::recv(void *buf, size_t size) {
   }
 }
 
-class NameResolver {
-public:
-  NameResolver(const char *host, tcp_port port) {
-    addrinfo hints;
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-
-    std::stringstream port_str;  // to_string in unavailable in MinGW.
-    port_str << port;
-    int result = getaddrinfo(host, port_str.str().c_str(), &hints, &addrs);
-    if (result != 0) {
-      std::stringstream msg;
-      msg << "Unable to resolve host '" << host << "': " << get_socket_error(result);
-      throw host_resolve_error(msg.str());
-    }
-    if (addrs == nullptr) {
-      std::stringstream msg;
-      msg << "Unable to resolve host '" << host << "': no matching host found";
-      throw host_resolve_error(msg.str());
-    }
-  }
-
-  sockaddr* ai_addr() {
-    return addrs->ai_addr;
-  }
-
-  int ai_addrlen() {
-    return addrs->ai_addrlen;
-  }
-
-  ~NameResolver() {
-    freeaddrinfo(addrs);
-  }
-
-private:
-  addrinfo *addrs;
-};
-
 void tcp_client_socket::connect() {
   SOCKET_STARTUP();
 
-  NameResolver resolver(host_.c_str(), port_);
+  NameResolver resolver(host_.c_str(), AF_INET, SOCK_STREAM, IPPROTO_TCP, port_);
   SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   ensure_or_throw(sock != INVALID_SOCKET, socket_error);
   try {
@@ -105,7 +65,7 @@ void tcp_client_socket::connect() {
 tcp_server_socket::tcp_server_socket(hostname host, tcp_port port) {
   SOCKET_STARTUP();
 
-  NameResolver resolver(host, port);
+  NameResolver resolver(host, AF_INET, SOCK_STREAM, IPPROTO_TCP, port);
   sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   int reuse_addr = 1;
   ensure_or_throw(setsockopt(sock_, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&reuse_addr), sizeof reuse_addr) == 0, socket_error);

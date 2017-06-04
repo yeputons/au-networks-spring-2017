@@ -56,4 +56,16 @@ void ensure_or_throw_impl(bool condition, const char *errname, const char *funna
 }
 #define ensure_or_throw(cond, error) ensure_or_throw_impl<error>(cond, #error, __FUNCTION__, __FILE__, __LINE__, #cond)
 
+class NameResolver {
+public:
+  NameResolver(const char *host, int ai_family, int ai_socktype, int ai_protocol, int port = 0);
+  ~NameResolver();
+
+  const sockaddr* ai_addr() { return addrs->ai_addr; }
+  int ai_addrlen() { return addrs->ai_addrlen; }
+
+private:
+  addrinfo *addrs;
+};
+
 #endif
