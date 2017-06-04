@@ -1,5 +1,12 @@
 #include "au_stream_socket_impl.h"
 #include <iostream>
+#include <string.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+typedef int SOCKET;
+#endif
 
 namespace au_stream_socket {
 
@@ -44,7 +51,7 @@ void messages_broker::run() {
   static thread_local char buffer[8192];
   for (;;) {
     sockaddr_in from;
-    int fromlen = sizeof from;
+    socklen_t fromlen = sizeof from;
     std::cerr << "recvfrom\n";
     int size = recvfrom(s, buffer, sizeof buffer, 0, reinterpret_cast<sockaddr*>(&from), &fromlen);
     ensure_or_throw(size > 0, socket_io_error);

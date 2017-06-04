@@ -31,7 +31,7 @@ public:
   void remove_connection(sockaddr_in local, sockaddr_in remote);
 
 private:
-  messages_broker() : thread_(messages_broker::run, this) {
+  messages_broker() : thread_(&messages_broker::run, this) {
     thread_.detach();
   }
 

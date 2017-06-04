@@ -2,6 +2,7 @@
 #include <thread>
 #include <mutex>
 #include <map>
+#include <string.h>
 
 #include "au_stream_socket.h"
 #include "common_socket_impl.h"

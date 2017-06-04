@@ -2,6 +2,7 @@
 #include "stream_socket.h"
 #include <sstream>
 #include <string>
+#include <string.h>
 
 std::string get_socket_error(int code) {
   #ifdef _WIN32
