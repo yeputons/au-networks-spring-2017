@@ -11,7 +11,7 @@
 using au_stream_socket::messages_broker;
 
 sockaddr_in resolve(hostname host, int port) {
-  NameResolver resolver(host, AF_INET, SOCK_STREAM, au_stream_socket::IPPROTO_AU, port);
+  NameResolver resolver(host, AF_INET, SOCK_STREAM, 0, port);
   assert(resolver.ai_addrlen() == sizeof(sockaddr_in));
   const sockaddr_in *addr = reinterpret_cast<const sockaddr_in*>(resolver.ai_addr());
   return *addr;
