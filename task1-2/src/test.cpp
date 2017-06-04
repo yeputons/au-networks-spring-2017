@@ -69,6 +69,7 @@ static void test_stream_sockets_datapipe()
             buf[buf_ix] = i;
         server_client->send(buf, sizeof(buf));
     }
+    pthread_join(th, NULL);
 }
 
 static void* test_stream_sockets_partial_data_sent_thread_func(void *)
@@ -102,6 +103,7 @@ static void test_stream_sockets_partial_data_sent()
         thrown = true;
     }
     assert(thrown);
+    pthread_join(th, NULL);
 }
 
 #ifdef TEST_TCP_STREAM_SOCKET
