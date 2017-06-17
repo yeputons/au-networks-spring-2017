@@ -75,7 +75,6 @@ public:
     return queue_;
   }
   
-private:
   size_t try_send_lock_held(const T *buf, size_t size) {
     if (shutdown_) {
       throw locking_queue_shut_down();
@@ -107,6 +106,7 @@ private:
     return recved;
   }
 
+private:
   std::mutex &mutex_;
   std::condition_variable send_cond_, recv_cond_;
   bool shutdown_;
