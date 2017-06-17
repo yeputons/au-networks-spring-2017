@@ -53,8 +53,16 @@ public:
     }
   }
 
-  size_t try_send(T *buf, size_t size) {
+  size_t try_send(const T *buf, size_t size) {
     std::unique_lock<std::mutex> lock(mutex_);
+    return try_send_lock_held(buf, size);
+  }
+
+  size_t try_send_or_block(const T *buf, size_t size) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    send_cond_.wait(lock, [this]() {
+      return shutdown_ || !queue_.full();
+    });
     return try_send_lock_held(buf, size);
   }
 
