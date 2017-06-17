@@ -38,9 +38,9 @@ public:
         size--;
       }
       recv_cond_.notify_one();
-      if (!size && !queue.full()) {
-        send_cond_.notify_one();
-      }
+    }
+    if (!queue.full()) {
+      send_cond_.notify_one();
     }
   }
 
@@ -50,23 +50,37 @@ public:
       recv_cond_.wait(lock, [this]() {
         return shutdown_ || !queue.empty();
       });
-      if (shutdown_) {
-        throw locking_char_queue_shut_down();
-      }
-      while (size > 0 && !queue.empty()) {
-        *buf = queue.front();
-        queue.pop_front();
-        buf++;
-        size--;
-      }
-      send_cond_.notify_one();
-      if (!size && !queue.empty()) {
-        recv_cond_.notify_one();
-      }
+      size_t recved = try_recv_lock_held(buf, size);
+      buf += recved;
+      size -= recved;
     }
+    if (!queue.empty()) {
+      recv_cond_.notify_one();
+    }
+  }
+
+  size_t try_recv(char *buf, size_t size) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return try_recv_lock_held(buf, size);
   }
   
 private:
+  size_t try_recv_lock_held(char *buf, size_t size) {
+    if (shutdown_) {
+      throw locking_char_queue_shut_down();
+    }
+    size_t recved = 0;
+    while (size > 0 && !queue.empty()) {
+      *buf = queue.front();
+      queue.pop_front();
+      buf++;
+      size--;
+      recved++;
+    }
+    send_cond_.notify_one();
+    return recved;
+  }
+
   std::mutex mutex_;
   std::condition_variable send_cond_, recv_cond_;
   bool shutdown_;

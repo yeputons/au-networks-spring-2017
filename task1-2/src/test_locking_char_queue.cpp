@@ -51,6 +51,33 @@ TEST(LockingCharQueue, SingleThreadSmoke) {
   q.shutdown();
 }
 
+TEST(LockingCharQueue, TryRecv) {
+  locking_char_queue<6> q;
+  char buffer[] = { 1, 2, 3, 4, 5 };
+  q.send(buffer, 3);
+  q.send(buffer + 2, 3);
+
+  char recved[5] = {};
+  ASSERT_EQ(4, q.try_recv(recved, 4));
+  EXPECT_EQ(1, recved[0]);
+  EXPECT_EQ(2, recved[1]);
+  EXPECT_EQ(3, recved[2]);
+  EXPECT_EQ(3, recved[3]);
+
+  ASSERT_EQ(2, q.try_recv(recved, 4));
+  EXPECT_EQ(4, recved[0]);
+  EXPECT_EQ(5, recved[1]);
+
+  ASSERT_EQ(0, q.try_recv(recved, 4));
+
+  q.send(buffer, 1);
+
+  ASSERT_EQ(1, q.try_recv(recved, 4));
+  EXPECT_EQ(1, recved[0]);
+
+  q.shutdown();
+}
+
 TEST(LockingCharQueue, ProducerConsumer) {
   const int TRANSMISSION_SIZE = 100000;
   const int MIN_BLOCK_SIZE = 1;
