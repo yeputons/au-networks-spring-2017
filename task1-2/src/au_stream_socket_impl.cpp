@@ -24,10 +24,10 @@ void messages_broker::stop_listen(sockaddr_in addr) {
 
 void messages_broker::add_connection(std::shared_ptr<connection_impl> sock) {
   std::lock_guard<std::mutex> lock(mutex_);
-  add_connection_locked(sock);
+  add_connection_lock_held(sock);
 }
 
-void messages_broker::add_connection_locked(std::shared_ptr<connection_impl> sock) {
+void messages_broker::add_connection_lock_held(std::shared_ptr<connection_impl> sock) {
   auto &conns = connections_[sock->get_remote()];
   if (conns.contains(sock->get_local())) {
     throw socket_error("There is already a similar connection");
@@ -37,11 +37,11 @@ void messages_broker::add_connection_locked(std::shared_ptr<connection_impl> soc
 
 //void messages_broker::remove_connection(sockaddr_in local, sockaddr_in remote) {
 //  std::lock_guard<std::mutex> lock(mutex_);
-//  remove_connection_locked(local, remote);
+//  remove_connection_lock_held(local, remote);
 //  // TODO
 //}
 
-//void messages_broker::remove_connection_locked(sockaddr_in local, sockaddr_in remote) {
+//void messages_broker::remove_connection_lock_held(sockaddr_in local, sockaddr_in remote) {
 //  // TODO
 //}
 

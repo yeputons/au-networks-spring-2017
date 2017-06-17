@@ -86,7 +86,7 @@ void messages_broker::process_packet(const au_packet &packet) {
     auto conn = std::make_shared<connection_impl>(packet.dest, packet.source);
     conn->process_packet(packet);
     listener->add_client(conn);
-    add_connection_locked(conn);
+    add_connection_lock_held(conn);
     return;
   }
   std::cerr << "Received unknown packet from " << packet.source << " to " << packet.dest
