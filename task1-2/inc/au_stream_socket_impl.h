@@ -12,7 +12,7 @@
 #include "au_stream_addr_map.h"
 #include "au_stream_socket_protocol.h"
 #include "utils/cyclic_queue.h"
-#include "utils/locking_char_queue.h"
+#include "utils/locking_queue.h"
 
 namespace au_stream_socket {
 
@@ -98,8 +98,8 @@ private:
   uint32_t ack_sn;
 
   cyclic_queue<char, uint32_t, 4096> send_window;
-  locking_char_queue<4096> send_queue;
-  locking_char_queue<4096> recv_queue;
+  locking_queue<char, 4096> send_queue;
+  locking_queue<char, 4096> recv_queue;
 
   std::mutex mutex_;
 };

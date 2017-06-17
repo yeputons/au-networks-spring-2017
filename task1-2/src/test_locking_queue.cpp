@@ -1,4 +1,4 @@
-#include "utils/locking_char_queue.h"
+#include "utils/locking_queue.h"
 #include <gtest/gtest.h>
 #include <random>
 #include <thread>
@@ -32,7 +32,7 @@ private:
 };
 
 TEST(LockingCharQueue, SingleThreadSmoke) {
-  locking_char_queue<6> q;
+  locking_queue<char, 6> q;
   char buffer[] = { 1, 2, 3, 4, 5 };
   q.send(buffer, 3);
   q.send(buffer + 2, 3);
@@ -52,7 +52,7 @@ TEST(LockingCharQueue, SingleThreadSmoke) {
 }
 
 TEST(LockingCharQueue, TryRecv) {
-  locking_char_queue<6> q;
+  locking_queue<char, 6> q;
   char buffer[] = { 1, 2, 3, 4, 5 };
   q.send(buffer, 3);
   q.send(buffer + 2, 3);
@@ -83,7 +83,7 @@ TEST(LockingCharQueue, ProducerConsumer) {
   const int MIN_BLOCK_SIZE = 1;
   const int MAX_BLOCK_SIZE = 20;
 
-  locking_char_queue<16> q;
+  locking_queue<char, 16> q;
   std::thread producer([&q]() {
     std::default_random_engine gen;
     std::uniform_int_distribution<int> distrib(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE);
@@ -123,7 +123,7 @@ TEST(LockingCharQueue, ProducerConsumer) {
 }
 
 TEST(LockingCharQueue, ShutdownAbortsSend) {
-  locking_char_queue<10> q;
+  locking_queue<char, 10> q;
   barrier barrier(2);
   bool aborted;
   std::thread producer([&q, &barrier, &aborted]() {
@@ -132,7 +132,7 @@ TEST(LockingCharQueue, ShutdownAbortsSend) {
     barrier.await();
     try {
       q.send(block, 6);
-    } catch (const locking_char_queue_shut_down&) {
+    } catch (const locking_queue_shut_down&) {
       aborted = true;
     }
   });
@@ -145,7 +145,7 @@ TEST(LockingCharQueue, ShutdownAbortsSend) {
 }
 
 TEST(LockingCharQueue, ShutdownAbortsRecv) {
-  locking_char_queue<10> q;
+  locking_queue<char, 10> q;
   barrier barrier(2);
   bool aborted;
   std::thread consumer([&q, &barrier, &aborted]() {
@@ -154,7 +154,7 @@ TEST(LockingCharQueue, ShutdownAbortsRecv) {
     barrier.await();
     try {
       q.recv(block, 6);
-    } catch (const locking_char_queue_shut_down&) {
+    } catch (const locking_queue_shut_down&) {
       aborted = true;
     }
   });
