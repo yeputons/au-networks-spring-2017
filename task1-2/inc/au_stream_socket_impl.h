@@ -40,7 +40,7 @@ private:
     thread_.detach();
   }
 
-  void process_packet(const au_packet &packet);
+  void process_packet(au_packet packet);
   void add_connection_lock_held(std::shared_ptr<connection_impl> sock);
   void remove_connection_lock_held(sockaddr_in local, sockaddr_in remote);
 
@@ -82,7 +82,7 @@ public:
   sockaddr_in get_local() const;
   sockaddr_in get_remote() const;
 
-  void process_packet(const au_packet &packet);
+  void process_packet(au_packet packet);
 
   void start_connection();
   void send(const char *buf, size_t size);

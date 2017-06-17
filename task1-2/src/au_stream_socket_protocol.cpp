@@ -67,14 +67,14 @@ au_packet deserialize(sockaddr_in source, sockaddr_in dest, char *buf, size_t le
   return result;
 }
 
-void messages_broker::process_packet(const au_packet &packet) {
+void messages_broker::process_packet(au_packet packet) {
   std::lock_guard<std::mutex> lock(mutex_);
   {
     auto it1 = connections_.find(packet.source);
     if (it1 != connections_.end()) {
       auto it2 = it1->second.find(packet.dest);
       if (it2 != it1->second.end()) {
-        it2->second->process_packet(packet);
+        it2->second->process_packet(std::move(packet));
         return;
       }
     }
@@ -84,7 +84,7 @@ void messages_broker::process_packet(const au_packet &packet) {
   if (it != listeners_.end() && packet.flags == Flags::SYN) {
     auto &listener = it->second;
     auto conn = std::make_shared<connection_impl>(packet.dest, packet.source);
-    conn->process_packet(packet);
+    conn->process_packet(std::move(packet));
     listener->add_client(conn);
     add_connection_lock_held(conn);
     return;
@@ -127,7 +127,7 @@ void connection_impl::start_connection() {
   state_ = SYN_SENT;
 }
 
-void connection_impl::process_packet(const au_packet &packet) {
+void connection_impl::process_packet(au_packet packet) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (state_ == CLOSED && packet.flags == Flags::SYN) {
     if (!packet.data.empty()) {
