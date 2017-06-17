@@ -27,13 +27,13 @@ public:
     std::unique_lock<std::mutex> lock(mutex_);
     while (size > 0) {
       send_cond_.wait(lock, [this]() {
-        return shutdown_ || !queue.full();
+        return shutdown_ || !queue_.full();
       });
       size_t sent = try_send_lock_held(buf, size);
       buf += sent;
       size -= sent;
     }
-    if (!queue.full()) {
+    if (!queue_.full()) {
       send_cond_.notify_one();
     }
   }
@@ -42,13 +42,13 @@ public:
     std::unique_lock<std::mutex> lock(mutex_);
     while (size > 0) {
       recv_cond_.wait(lock, [this]() {
-        return shutdown_ || !queue.empty();
+        return shutdown_ || !queue_.empty();
       });
       size_t recved = try_recv_lock_held(buf, size);
       buf += recved;
       size -= recved;
     }
-    if (!queue.empty()) {
+    if (!queue_.empty()) {
       recv_cond_.notify_one();
     }
   }
@@ -69,8 +69,8 @@ private:
       throw locking_queue_shut_down();
     }
     size_t sent = 0;
-    while (size > 0 && !queue.full()) {
-      queue.push_back(*buf);
+    while (size > 0 && !queue_.full()) {
+      queue_.push_back(*buf);
       buf++;
       size--;
       sent++;
@@ -84,9 +84,9 @@ private:
       throw locking_queue_shut_down();
     }
     size_t recved = 0;
-    while (size > 0 && !queue.empty()) {
-      *buf = queue.front();
-      queue.pop_front();
+    while (size > 0 && !queue_.empty()) {
+      *buf = queue_.front();
+      queue_.pop_front();
       buf++;
       size--;
       recved++;
@@ -98,7 +98,7 @@ private:
   std::mutex mutex_;
   std::condition_variable send_cond_, recv_cond_;
   bool shutdown_;
-  cyclic_queue<T, std::size_t, max_size> queue;
+  cyclic_queue<T, std::size_t, max_size> queue_;
 };
 
 #endif  // LOCKING_QUEUE_H
