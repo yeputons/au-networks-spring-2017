@@ -39,6 +39,8 @@ private:
   }
 
   void process_packet(const au_packet &packet);
+  void add_connection_locked(std::shared_ptr<connection_impl> sock);
+  void remove_connection_locked(sockaddr_in local, sockaddr_in remote);
 
   std::thread thread_;
   std::mutex mutex_;
