@@ -34,6 +34,7 @@ std::string get_socket_error() {
 
 
 NameResolver::NameResolver(const char *host, int ai_family, int ai_socktype, int ai_protocol, int port) {
+  SOCKET_STARTUP();
   addrinfo hints;
   memset(&hints, 0, sizeof hints);
   hints.ai_family = ai_family;
