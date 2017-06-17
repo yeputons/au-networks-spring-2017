@@ -1,9 +1,9 @@
-#include "test.h"
 #include "stream_socket.h"
 #include "protocol.h"
 #include <assert.h>
 #include <sstream>
 #include <set>
+#include <gtest/gtest.h>
 
 class stringstream_socket : public stream_socket {
 public:
@@ -93,13 +93,17 @@ template<typename T> void test_message() {
   }
 }
 
-void test_protocol() {
-  ids.clear();
-  test_message<RegistrationMessage>();
-  test_message<LoginMessage>();
-  test_message<RegistrationResponse>();
-  test_message<BalanceInquiryRequest>();
-  test_message<BalanceInquiryResponse>();
-  test_message<TransferRequest>();
-  test_message<OperationSucceeded>();
+// FIXME: tests depend on each and are not thread-safe other because `id` is a global variable
+
+#define ADD_TEST(msg) \
+TEST(ProtocolTest, msg) { \
+  test_message<msg>(); \
 }
+
+ADD_TEST(RegistrationMessage)
+ADD_TEST(LoginMessage)
+ADD_TEST(RegistrationResponse)
+ADD_TEST(BalanceInquiryRequest)
+ADD_TEST(BalanceInquiryResponse)
+ADD_TEST(TransferRequest)
+ADD_TEST(OperationSucceeded)

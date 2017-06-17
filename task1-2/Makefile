@@ -21,13 +21,20 @@ bin/server32: $(SRCS_server:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o32)
 bin/server: $(SRCS_server:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o64)
 
 CXX=g++
-CXXFLAGS=-pthread -pedantic -Wall -Wshadow -Wextra -Werror -std=c++11 -I$(INCDIR) -g
+CXXFLAGS=-pthread -pedantic -Wall -Wshadow -Wextra -Werror -std=gnu++11 -I$(INCDIR) -g
 LDFLAGS=-pthread
 LDLIBS=
+LDLIBS_TEST=-lgtest -lgtest_main
 ifeq ($(OS),Windows_NT)
   CXXFLAGS+=-DWINVER=WindowsXP
   LDLIBS+=-lws2_32
 endif
+
+bin/test32: | bin
+	$(CXX) -m32 -o $@ $(LDFLAGS) $^ $(LDLIBS) $(LDLIBS_TEST)
+
+bin/test64: | bin
+	$(CXX) -m64 -o $@ $(LDFLAGS) $^ $(LDLIBS) $(LDLIBS_TEST)
 
 bin/%32: | bin
 	$(CXX) -m32 -o $@ $(LDFLAGS) $^ $(LDLIBS)
