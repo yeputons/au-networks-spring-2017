@@ -11,6 +11,8 @@
 #include "common_socket_impl.h"
 #include "au_stream_addr_map.h"
 #include "au_stream_socket_protocol.h"
+#include "utils/cyclic_queue.h"
+#include "utils/locking_char_queue.h"
 
 namespace au_stream_socket {
 
@@ -83,17 +85,22 @@ public:
   void process_packet(const au_packet &packet);
 
   void start_connection();
-  size_t send(const char *buf, size_t size);
-  size_t recv(char *buf, size_t size);
+  void send(const char *buf, size_t size);
+  void recv(char *buf, size_t size);
   void shutdown();
 
 private:
-  void send_packet(Flags flags, const std::vector<char> data);
+  void send_packet(Flags flags, uint32_t sn, const std::vector<char> data);
 
   SOCKET sock_;
   sockaddr_in local_, remote_;
   connection_state state_;
-  uint32_t send_sn, recv_sn;
+  uint32_t ack_sn;
+
+  cyclic_queue<char, uint32_t, 4096> send_window;
+  locking_char_queue<4096> send_queue;
+  locking_char_queue<4096> recv_queue;
+
   std::mutex mutex_;
 };
 

@@ -21,34 +21,18 @@ sockaddr_in resolve(hostname host, int port) {
 
 }  // namespace
 
-void au_stream_connection_socket::send(const void *orig_buf, size_t size) {
+void au_stream_connection_socket::send(const void *buf, size_t size) {
   if (!impl_) {
     throw socket_uninitialized("Socket is uninitialized");
   }
-  const char *cbuf = static_cast<const char*>(orig_buf);
-  while (size > 0) {
-    size_t wrote = impl_->send(cbuf, size);
-    if (!wrote) {
-      throw std::logic_error("send() returned zero instead of blocking");
-    }
-    cbuf += wrote;
-    size -= wrote;
-  }
+  impl_->send(static_cast<const char*>(buf), size);
 }
 
-void au_stream_connection_socket::recv(void *orig_buf, size_t size) {
+void au_stream_connection_socket::recv(void *buf, size_t size) {
   if (!impl_) {
     throw socket_uninitialized("Socket is uninitialized");
   }
-  char *cbuf = static_cast<char*>(orig_buf);
-  while (size > 0) {
-    size_t read = impl_->recv(cbuf, size);
-    if (!read) {
-      throw std::logic_error("recv() returned zero instead of blocking");
-    }
-    cbuf += read;
-    size -= read;
-  }
+  impl_->recv(static_cast<char*>(buf), size);
 }
 
 au_stream_connection_socket::operator bool() {
