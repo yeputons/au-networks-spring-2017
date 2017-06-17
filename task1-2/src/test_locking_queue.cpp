@@ -33,7 +33,7 @@ private:
 
 TEST(LockingCharQueue, SingleThreadSmoke) {
   std::mutex m;
-  locking_queue<char, 6> q(m);
+  locking_queue<char, std::size_t, 6> q(m);
   char buffer[] = { 1, 2, 3, 4, 5 };
   q.send(buffer, 3);
   q.send(buffer + 2, 3);
@@ -54,7 +54,7 @@ TEST(LockingCharQueue, SingleThreadSmoke) {
 
 TEST(LockingCharQueue, TrySend) {
   std::mutex m;
-  locking_queue<char, 4> q(m);
+  locking_queue<char, std::size_t, 4> q(m);
   char buffer[] = { 1, 2, 3, 4, 5 };
   ASSERT_EQ(3, q.try_send(buffer, 3));
   ASSERT_EQ(1, q.try_send(buffer + 2, 3));
@@ -78,7 +78,7 @@ TEST(LockingCharQueue, TrySend) {
 
 TEST(LockingCharQueue, TryRecv) {
   std::mutex m;
-  locking_queue<char, 6> q(m);
+  locking_queue<char, std::size_t, 6> q(m);
   char buffer[] = { 1, 2, 3, 4, 5 };
   q.send(buffer, 3);
   q.send(buffer + 2, 3);
@@ -110,7 +110,7 @@ TEST(LockingCharQueue, ProducerConsumer) {
   const int MAX_BLOCK_SIZE = 20;
 
   std::mutex m;
-  locking_queue<char, 16> q(m);
+  locking_queue<char, std::size_t, 16> q(m);
   std::thread producer([&q]() {
     std::default_random_engine gen;
     std::uniform_int_distribution<int> distrib(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE);
@@ -151,7 +151,7 @@ TEST(LockingCharQueue, ProducerConsumer) {
 
 TEST(LockingCharQueue, ShutdownAbortsSend) {
   std::mutex m;
-  locking_queue<char, 10> q(m);
+  locking_queue<char, std::size_t, 10> q(m);
   barrier barrier(2);
   bool aborted;
   std::thread producer([&q, &barrier, &aborted]() {
@@ -174,7 +174,7 @@ TEST(LockingCharQueue, ShutdownAbortsSend) {
 
 TEST(LockingCharQueue, ShutdownAbortsRecv) {
   std::mutex m;
-  locking_queue<char, 10> q(m);
+  locking_queue<char, std::size_t, 10> q(m);
   barrier barrier(2);
   bool aborted;
   std::thread consumer([&q, &barrier, &aborted]() {

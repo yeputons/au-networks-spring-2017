@@ -10,7 +10,7 @@ struct locking_queue_shut_down : std::runtime_error {
   locking_queue_shut_down() : std::runtime_error("locking_queue was shut down") {}
 };
 
-template<typename T, std::size_t max_size>
+template<typename T, typename I, std::size_t max_size>
 class locking_queue {
 public:
   locking_queue(std::mutex &mutex) : mutex_(mutex), shutdown_(false) {}
@@ -62,6 +62,10 @@ public:
     std::unique_lock<std::mutex> lock(mutex_);
     return try_recv_lock_held(buf, size);
   }
+
+  cyclic_queue<T, I, max_size>& queue_lock_held() {
+    return queue_;
+  }
   
 private:
   size_t try_send_lock_held(const T *buf, size_t size) {
@@ -98,7 +102,7 @@ private:
   std::mutex &mutex_;
   std::condition_variable send_cond_, recv_cond_;
   bool shutdown_;
-  cyclic_queue<T, std::size_t, max_size> queue_;
+  cyclic_queue<T, I, max_size> queue_;
 };
 
 #endif  // LOCKING_QUEUE_H
