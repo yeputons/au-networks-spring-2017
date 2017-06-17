@@ -9,6 +9,7 @@
 namespace au_stream_socket {
 
 static const size_t MAX_SEGMENT_SIZE = 1000;
+static const size_t AU_PACKET_HEADER_SIZE = 20;
 
 // Bytes  Description
 // 0-1    source port (network order)
@@ -20,15 +21,15 @@ static const size_t MAX_SEGMENT_SIZE = 1000;
 // 16-19  checksum (all bytes of packet XORed together should yield zero)
 
 int serialize(const au_packet &packet, char *buf, size_t len) {
-  assert(20 + packet.data.size() <= len);
+  assert(AU_PACKET_HEADER_SIZE + packet.data.size() <= len);
 
-  memset(buf, 0, 20);
+  memset(buf, 0, AU_PACKET_HEADER_SIZE);
   *reinterpret_cast<uint16_t*>(buf + 0) = packet.source.sin_port;
   *reinterpret_cast<uint16_t*>(buf + 2) = packet.dest.sin_port;
   *reinterpret_cast<uint32_t*>(buf + 4) = htonl(packet.sn);
   *reinterpret_cast<uint32_t*>(buf + 8) = htonl(packet.ack_sn);
   *reinterpret_cast<Flags*>(buf + 12) = packet.flags;
-  copy(packet.data.begin(), packet.data.end(), buf + 20);
+  copy(packet.data.begin(), packet.data.end(), buf + AU_PACKET_HEADER_SIZE);
 
   for (size_t checksum_pos = 0; checksum_pos < 4; checksum_pos++) {
     uint8_t expected = 0;
@@ -37,11 +38,11 @@ int serialize(const au_packet &packet, char *buf, size_t len) {
     }
     buf[16 + checksum_pos] = expected;
   }
-  return 20 + packet.data.size();
+  return AU_PACKET_HEADER_SIZE + packet.data.size();
 }
 
 au_packet deserialize(sockaddr_in source, sockaddr_in dest, char *buf, size_t len) {
-  if (len < 20) {
+  if (len < AU_PACKET_HEADER_SIZE) {
     throw invalid_packet("Packet is too short");
   }
   for (size_t checksum_pos = 0; checksum_pos < 4; checksum_pos++) {
@@ -62,7 +63,7 @@ au_packet deserialize(sockaddr_in source, sockaddr_in dest, char *buf, size_t le
   result.sn              = ntohl(*reinterpret_cast<uint32_t*>(buf + 4));
   result.ack_sn          = ntohl(*reinterpret_cast<uint32_t*>(buf + 8));
   result.flags           =       *reinterpret_cast<Flags*>(buf + 12);
-  result.data.assign(buf + 20, buf + len);
+  result.data.assign(buf + AU_PACKET_HEADER_SIZE, buf + len);
   return result;
 }
 
@@ -119,7 +120,7 @@ void connection_impl::send_packet(Flags flags, const std::vector<char> data) {
   ans.ack_sn = recv_sn;
   ans.data = std::move(data);
 
-  static thread_local char buf[20 + MAX_SEGMENT_SIZE];
+  static thread_local char buf[AU_PACKET_HEADER_SIZE + MAX_SEGMENT_SIZE];
   int len = serialize(ans, buf, sizeof buf);
   ensure_or_throw(sendto(sock_, buf, len, 0, reinterpret_cast<sockaddr*>(&remote_), sizeof(remote_)) == len, socket_io_error);
 }
