@@ -92,6 +92,8 @@ public:
 private:
   void send_packet(Flags flags, uint32_t sn, const std::vector<char> data);
 
+  std::mutex mutex_;
+
   SOCKET sock_;
   sockaddr_in local_, remote_;
   connection_state state_;
@@ -100,8 +102,6 @@ private:
   cyclic_queue<char, uint32_t, 4096> send_window;
   locking_queue<char, 4096> send_queue;
   locking_queue<char, 4096> recv_queue;
-
-  std::mutex mutex_;
 };
 
 }  // namespace au_stream_socket

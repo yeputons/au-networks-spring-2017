@@ -96,7 +96,7 @@ void messages_broker::process_packet(au_packet packet) {
 }
 
 connection_impl::connection_impl(sockaddr_in local, sockaddr_in remote)
-  : sock_(), local_(local), remote_(remote), state_(CLOSED) {
+  : sock_(), local_(local), remote_(remote), state_(CLOSED), ack_sn(0), send_queue(mutex_), recv_queue(mutex_) {
   SOCKET_STARTUP();
   send_window.reset_id(10);  // Arbitrary const greater than zero (so we can call send_window.begin_id() - 1)
   sock_ = socket(AF_INET, SOCK_RAW, IPPROTO_AU);

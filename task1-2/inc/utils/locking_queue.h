@@ -13,7 +13,7 @@ struct locking_queue_shut_down : std::runtime_error {
 template<typename T, std::size_t max_size>
 class locking_queue {
 public:
-  locking_queue() : shutdown_(false) {}
+  locking_queue(std::mutex &mutex) : mutex_(mutex), shutdown_(false) {}
 
   void shutdown() {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -95,7 +95,7 @@ private:
     return recved;
   }
 
-  std::mutex mutex_;
+  std::mutex &mutex_;
   std::condition_variable send_cond_, recv_cond_;
   bool shutdown_;
   cyclic_queue<T, std::size_t, max_size> queue_;
