@@ -29,15 +29,9 @@ public:
       send_cond_.wait(lock, [this]() {
         return shutdown_ || !queue.full();
       });
-      if (shutdown_) {
-        throw locking_queue_shut_down();
-      }
-      while (size > 0 && !queue.full()) {
-        queue.push_back(*buf);
-        buf++;
-        size--;
-      }
-      recv_cond_.notify_one();
+      size_t sent = try_send_lock_held(buf, size);
+      buf += sent;
+      size -= sent;
     }
     if (!queue.full()) {
       send_cond_.notify_one();
@@ -59,12 +53,32 @@ public:
     }
   }
 
+  size_t try_send(T *buf, size_t size) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return try_send_lock_held(buf, size);
+  }
+
   size_t try_recv(T *buf, size_t size) {
     std::unique_lock<std::mutex> lock(mutex_);
     return try_recv_lock_held(buf, size);
   }
   
 private:
+  size_t try_send_lock_held(const T *buf, size_t size) {
+    if (shutdown_) {
+      throw locking_queue_shut_down();
+    }
+    size_t sent = 0;
+    while (size > 0 && !queue.full()) {
+      queue.push_back(*buf);
+      buf++;
+      size--;
+      sent++;
+    }
+    recv_cond_.notify_one();
+    return sent;
+  }
+
   size_t try_recv_lock_held(T *buf, size_t size) {
     if (shutdown_) {
       throw locking_queue_shut_down();

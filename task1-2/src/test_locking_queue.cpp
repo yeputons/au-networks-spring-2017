@@ -51,6 +51,29 @@ TEST(LockingCharQueue, SingleThreadSmoke) {
   q.shutdown();
 }
 
+TEST(LockingCharQueue, TrySend) {
+  locking_queue<char, 4> q;
+  char buffer[] = { 1, 2, 3, 4, 5 };
+  ASSERT_EQ(3, q.try_send(buffer, 3));
+  ASSERT_EQ(1, q.try_send(buffer + 2, 3));
+
+  char recved[4] = {};
+  q.recv(recved, 4);
+  EXPECT_EQ(1, recved[0]);
+  EXPECT_EQ(2, recved[1]);
+  EXPECT_EQ(3, recved[2]);
+  EXPECT_EQ(3, recved[3]);
+
+  ASSERT_EQ(4, q.try_send(buffer, 5));
+  q.recv(recved, 4);
+  EXPECT_EQ(1, recved[0]);
+  EXPECT_EQ(2, recved[1]);
+  EXPECT_EQ(3, recved[2]);
+  EXPECT_EQ(4, recved[3]);
+
+  q.shutdown();
+}
+
 TEST(LockingCharQueue, TryRecv) {
   locking_queue<char, 6> q;
   char buffer[] = { 1, 2, 3, 4, 5 };
