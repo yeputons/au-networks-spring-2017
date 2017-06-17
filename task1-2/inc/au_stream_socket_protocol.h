@@ -8,12 +8,17 @@
 namespace au_stream_socket {
 
 enum class Flags : uint8_t {
+  NONE = 0,
   SYN = 1,
   ACK = 2
 };
 
 inline Flags operator|(Flags a, Flags b) {
   return static_cast<Flags>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
+
+inline Flags operator&(Flags a, Flags b) {
+  return static_cast<Flags>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
 }
 
 struct au_packet {
