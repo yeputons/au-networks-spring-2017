@@ -20,7 +20,7 @@ void retrier::retry_after(duration delay, function function) {
 
 void retrier::run() {
   std::unique_lock<std::mutex> lock(mutex_);
-  while (true) {
+  while (!terminating_) {
     if (queue_.empty()) {
       cond_.wait(lock);
     } else {
@@ -36,9 +36,11 @@ void retrier::run() {
       duration delay = queue_.top().delay;
       function function = std::move(queue_.top().func);
       queue_.pop();
+      lock.unlock();
       if (!function()) {
         queue_.push({std::chrono::steady_clock::now() + delay, delay, std::move(function)});
       }
+      lock.lock();
     }
   }
 }
