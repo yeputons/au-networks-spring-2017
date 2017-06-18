@@ -3,8 +3,8 @@
 # Based on https://github.com/yeputons/project-templates
 
 TARGETS=bin/test32 bin/test64 bin/client32 bin/client64 bin/server32 bin/server
-SRCS_common=$(SRCDIR)/tcp_socket.cpp $(SRCDIR)/au_stream_socket.cpp $(SRCDIR)/au_stream_socket_impl.cpp $(SRCDIR)/au_stream_socket_protocol.cpp $(SRCDIR)/common_socket_impl.cpp $(SRCDIR)/protocol.cpp
-SRCS_test=$(SRCS_common) $(SRCDIR)/test.cpp $(SRCDIR)/test_protocol.cpp $(SRCDIR)/test_cyclic_queue.cpp $(SRCDIR)/test_locking_queue.cpp
+SRCS_common=$(SRCDIR)/tcp_socket.cpp $(SRCDIR)/au_stream_socket.cpp $(SRCDIR)/au_stream_socket_impl.cpp $(SRCDIR)/au_stream_socket_protocol.cpp $(SRCDIR)/common_socket_impl.cpp $(SRCDIR)/protocol.cpp $(SRCDIR)/retrier.cpp
+SRCS_test=$(SRCS_common) $(SRCDIR)/test.cpp $(SRCDIR)/test_protocol.cpp $(SRCDIR)/test_cyclic_queue.cpp $(SRCDIR)/test_locking_queue.cpp $(SRCDIR)/test_retrier.cpp
 SRCS_client=$(SRCS_common) $(SRCDIR)/client.cpp
 SRCS_server=$(SRCS_common) $(SRCDIR)/server.cpp
 OBJDIR=.obj
