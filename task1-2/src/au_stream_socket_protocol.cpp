@@ -262,8 +262,8 @@ void connection_impl::process_packet(au_packet packet) {
       #endif
     } catch (const locking_queue_shut_down&) {
     }
-    if (flushed || send_window_changed) {
-      send_some_data(flushed ? Flags::ACK : Flags::NONE);
+    if (!packet.data.empty() || send_window_changed) {
+      send_some_data(Flags::ACK);
     }
   } else {
     std::cerr << "Received some packet from " << packet.source << " to " << packet.dest
