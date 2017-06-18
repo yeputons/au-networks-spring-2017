@@ -105,8 +105,8 @@ private:
   connection_state state_;
   uint32_t ack_sn;
 
-  locking_queue<char, uint32_t, 4096> send_window;
-  locking_queue<char, uint32_t, 4096> recv_queue;
+  locking_queue<char, uint32_t, 20 * 1024> send_window;
+  locking_queue<char, uint32_t, 20 * 1024> recv_queue;
 };
 
 }  // namespace au_stream_socket
