@@ -13,6 +13,7 @@ static const size_t MAX_SEGMENT_SIZE = 1000;
 static const size_t AU_PACKET_HEADER_SIZE = 20;
 static const retrier::duration CONN_ACK_TIMEOUT = std::chrono::milliseconds(100);
 static const retrier::duration SEND_ACK_TIMEOUT = std::chrono::milliseconds(100);
+static const retrier::duration FIN_ACK_TIMEOUT = std::chrono::milliseconds(100);
 
 // Bytes  Description
 // 0-1    source port (network order)
@@ -194,12 +195,19 @@ void connection_impl::process_packet(au_packet packet) {
     std::cout << "Switch SYN_RECV --> ESTABLISHED\n";
   } else if (packet.flags == Flags::FIN) {
     send_packet(Flags::FIN | Flags::ACK, send_window_queue.begin_id(), {});
-    // TODO: add retry after timeout
-    state_ = FIN_RECV;
     std::cout << "Switching --> FIN_RECV\n";
+    state_ = FIN_RECV;
+    retrier_.retry_after(FIN_ACK_TIMEOUT, [this]() {
+      std::lock_guard<std::mutex> lock_(mutex_);
+      if (state_ != FIN_RECV) {
+        return true;
+      }
+      std::cout << "Re-confirm FIN (timeout)\n";
+      send_packet(Flags::FIN | Flags::ACK, send_window.queue_lock_held().begin_id(), {});
+      return false;
+    });
   } else if (state_ == FIN_SENT && packet.flags == (Flags::FIN | Flags::ACK)) {
     send_packet(Flags::ACK, send_window_queue.begin_id(), {});
-    // TODO: add retry after timeout
     state_ = TERMINATED;
     std::cout << "Switching FIN_SENT --> TERMINATED\n";
     messages_broker::get().remove_connection_from_process_packet(get_local(), get_remote());
@@ -330,8 +338,16 @@ void connection_impl::shutdown() {
     std::lock_guard<std::mutex> lock(mutex_);
     if (state_ <= ESTABLISHED) {
       send_packet(Flags::FIN, send_window.queue_lock_held().begin_id(), {});
-      // TODO: add retry after timeout
       state_ = FIN_SENT;
+      retrier_.retry_after(FIN_ACK_TIMEOUT, [this]() {
+        std::lock_guard<std::mutex> lock_(mutex_);
+        if (state_ != FIN_SENT) {
+          return true;
+        }
+        std::cout << "Re-send FIN (timeout)\n";
+        send_packet(Flags::FIN, send_window.queue_lock_held().begin_id(), {});
+        return false;
+      });
     }
   }
   // Wait for real shut down
