@@ -22,6 +22,7 @@ static const size_t AU_PACKET_HEADER_SIZE = 20;
 
 int serialize(const au_packet &packet, char *buf, size_t len) {
   assert(AU_PACKET_HEADER_SIZE + packet.data.size() <= len);
+  len = AU_PACKET_HEADER_SIZE + packet.data.size();
 
   memset(buf, 0, AU_PACKET_HEADER_SIZE);
   *reinterpret_cast<uint16_t*>(buf + 0) = packet.source.sin_port;
@@ -38,7 +39,7 @@ int serialize(const au_packet &packet, char *buf, size_t len) {
     }
     buf[16 + checksum_pos] = expected;
   }
-  return AU_PACKET_HEADER_SIZE + packet.data.size();
+  return len;
 }
 
 au_packet deserialize(sockaddr_in source, sockaddr_in dest, char *buf, size_t len) {
