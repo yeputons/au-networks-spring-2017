@@ -85,7 +85,6 @@ void messages_broker::process_packet(au_packet packet) {
     }
   }
   auto it = listeners_.find(packet.dest);
-  assert(listeners_.begin() != listeners_.end());
   if (it != listeners_.end() && packet.flags == Flags::SYN) {
     auto &listener = it->second;
     auto conn = std::make_shared<connection_impl>(packet.dest, packet.source);
@@ -94,10 +93,12 @@ void messages_broker::process_packet(au_packet packet) {
     add_connection_lock_held(conn);
     return;
   }
+  #ifdef AU_DEBUG
   std::cerr << "Received unknown packet from " << packet.source << " to " << packet.dest
             << "; data_len=" << packet.data.size()
             << "; flags=" << static_cast<int>(packet.flags)
             << "\n";
+  #endif
 }
 
 connection_impl::connection_impl(sockaddr_in local, sockaddr_in remote)
