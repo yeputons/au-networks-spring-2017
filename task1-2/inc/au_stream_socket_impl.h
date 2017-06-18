@@ -14,6 +14,7 @@
 #include "utils/cyclic_queue.h"
 #include "utils/locking_queue.h"
 #include "utils/event.h"
+#include "utils/retrier.h"
 
 namespace au_stream_socket {
 
@@ -99,6 +100,7 @@ private:
   void send_some_data(Flags flags);
 
   std::mutex mutex_;
+  retrier retrier_;
 
   SOCKET sock_;
   sockaddr_in local_, remote_;

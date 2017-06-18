@@ -3,6 +3,7 @@
 #include "common_socket_impl.h"
 #include <algorithm>
 #include <iostream>
+#include <chrono>
 #include <random>
 #include <string.h>
 
@@ -10,6 +11,7 @@ namespace au_stream_socket {
 
 static const size_t MAX_SEGMENT_SIZE = 1000;
 static const size_t AU_PACKET_HEADER_SIZE = 20;
+static const retrier::duration SEND_ACK_TIMEOUT = std::chrono::milliseconds(100);
 
 // Bytes  Description
 // 0-1    source port (network order)
@@ -244,12 +246,28 @@ void connection_impl::send_some_data(Flags flags) {
     buf[size] = send_window_queue[id];
     size++;
   }
+
   if (flags != Flags::NONE || size > 0) {
+    uint32_t begin_id = send_window_queue.begin_id();
+    std::vector<char> data(buf, buf + size);
+
     #ifdef AU_DEBUG
-    std::cout << "Sending packet with flags=" << static_cast<int>(flags) << ", data starts from " << send_window_queue.begin_id() << " and goes for " << size << "\n";
+    std::cout << "Sending packet with flags=" << static_cast<int>(flags) << ", data starts from " << send_window_queue.begin_id() << " and goes for " << data.size << "\n";
     #endif
-    send_packet(flags, send_window_queue.begin_id(), std::vector<char>(buf, buf + size));
-    // TODO: add retry after timeout
+    send_packet(flags, begin_id, data);
+
+    retrier_.retry_after(SEND_ACK_TIMEOUT, [begin_id, flags, data, this]() {
+      std::lock_guard<std::mutex> lock(mutex_);
+      auto &send_window_queue_ = send_window.queue_lock_held();
+      if (send_window_queue_.begin_id() != begin_id) {
+        return true;
+      }
+      #ifdef AU_DEBUG
+      std::cout << "Sending packet with flags=" << static_cast<int>(flags) << ", data starts from " << send_window_queue.begin_id() << " and goes for " << data.size() << "\n";
+      #endif
+      send_packet(flags, begin_id, data);
+      return false;
+    });
   }
 }
 
