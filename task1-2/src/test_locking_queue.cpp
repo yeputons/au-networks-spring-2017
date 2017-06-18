@@ -128,7 +128,7 @@ TEST(LockingCharQueue, ShutdownAbortsSend) {
   std::mutex m;
   locking_queue<char, std::size_t, 10> q(m);
   event ev;
-  bool aborted;
+  bool aborted = false;
   std::thread producer([&q, &ev, &aborted]() {
     char block[10] = {};
     q.send(block, 5);
@@ -151,7 +151,7 @@ TEST(LockingCharQueue, ShutdownAbortsRecv) {
   std::mutex m;
   locking_queue<char, std::size_t, 10> q(m);
   event ev;
-  bool aborted;
+  bool aborted = false;
   std::thread consumer([&q, &ev, &aborted]() {
     char block[10] = {};
     q.recv(block, 5);
