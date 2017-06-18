@@ -23,7 +23,7 @@ private:
   struct queue_item {
     time_point retry_at;
     duration delay;
-    function function;
+    function func;
 
     bool operator>(const queue_item &other) const {
       return retry_at > other.retry_at;
