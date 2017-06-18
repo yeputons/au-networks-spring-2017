@@ -4,8 +4,10 @@
 #include <mutex>
 #include <stdexcept>
 #include <map>
+#include <string.h>
 #include "protocol.h"
 #include "tcp_socket.h"
+#include "au_stream_socket.h"
 
 std::map<t_client_id, t_balance> balances;
 std::mutex balances_mutex;
@@ -117,11 +119,20 @@ int main(int argc, char* argv[]) {
 
   try {
     std::cout << "Trying to listen on " << host << ":" << port << "..." << std::endl;
-    tcp_server_socket server(host.c_str(), port);
+    std::unique_ptr<stream_server_socket> server;
+    const char *STREAM_SOCKET_TYPE = getenv("STREAM_SOCKET_TYPE");
+    if (!STREAM_SOCKET_TYPE || !strcmp(STREAM_SOCKET_TYPE, "tcp")) {
+      server.reset(new tcp_server_socket(host.c_str(), port));
+    } else if (!strcmp(STREAM_SOCKET_TYPE, "au")) {
+      server.reset(new au_stream_server_socket(host.c_str(), port));
+    } else {
+      std::cout << "Invalid env var STREAM_SOCKET_TYPE: should be either tcp or au" << std::endl;
+      return 1;
+    }
     std::cout << "Listening..." << std::endl;
 
     for (;;) {
-      std::unique_ptr<stream_socket> client(server.accept_one_client());
+      std::unique_ptr<stream_socket> client(server->accept_one_client());
       std::cout << "New client" << std::endl;
       std::thread th(process_client, std::move(client));
       th.detach();

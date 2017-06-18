@@ -2,8 +2,11 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <stdlib.h>
+#include <string.h>
 #include "protocol.h"
 #include "tcp_socket.h"
+#include "au_stream_socket.h"
 
 void help() {
   std::cout << "Available commands:\n"
@@ -83,13 +86,28 @@ int main(int argc, char* argv[]) {
     port = atoi(argv[2]);
   }
 
+  {
+    long long x;
+    asm("rdtsc" : "=A"(x));
+    srand(x);
+  }
+
   try {
     std::cout << "Trying to connect on " << host << ":" << port << "..." << std::endl;
-    tcp_client_socket sock(host.c_str(), port);
-    sock.connect();
+    std::unique_ptr<stream_client_socket> sock;
+    const char *STREAM_SOCKET_TYPE = getenv("STREAM_SOCKET_TYPE");
+    if (!STREAM_SOCKET_TYPE || !strcmp(STREAM_SOCKET_TYPE, "tcp")) {
+      sock.reset(new tcp_client_socket(host.c_str(), port));
+    } else if (!strcmp(STREAM_SOCKET_TYPE, "au")) {
+      sock.reset(new au_stream_client_socket(host.c_str(), rand(), port));
+    } else {
+      std::cout << "Invalid env var STREAM_SOCKET_TYPE: should be either tcp or au" << std::endl;
+      return 1;
+    }
+    sock->connect();
     std::cout << "Connected." << std::endl;
 
-    work(sock);
+    work(*sock);
   } catch (const std::exception &e) {
     std::cout << "Exception caught: " << e.what() << std::endl;
     return 1;
