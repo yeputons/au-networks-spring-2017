@@ -4,32 +4,7 @@
 #include <thread>
 #include <atomic>
 #include <assert.h>
-
-class barrier {
-public:
-  explicit barrier(int counter) : counter_(counter) {
-  }
-  ~barrier() {
-    assert(counter_ == 0);
-  }
-
-  void await() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    assert(counter_ > 0);
-    counter_--;
-    if (!counter_) {
-      cond_.notify_all();
-    }
-    cond_.wait(lock, [this]() {
-      return counter_ == 0;
-    });
-  }
-
-private:
-  std::mutex mutex_;
-  std::condition_variable cond_;
-  int counter_;
-};
+#include "utils/event.h"
 
 TEST(LockingCharQueue, SingleThreadSmoke) {
   std::mutex m;
@@ -152,19 +127,19 @@ TEST(LockingCharQueue, ProducerConsumer) {
 TEST(LockingCharQueue, ShutdownAbortsSend) {
   std::mutex m;
   locking_queue<char, std::size_t, 10> q(m);
-  barrier barrier(2);
+  event ev;
   bool aborted;
-  std::thread producer([&q, &barrier, &aborted]() {
+  std::thread producer([&q, &ev, &aborted]() {
     char block[10] = {};
     q.send(block, 5);
-    barrier.await();
+    ev.notify();
     try {
       q.send(block, 6);
     } catch (const locking_queue_shut_down&) {
       aborted = true;
     }
   });
-  barrier.await();
+  ev.await();
 
   EXPECT_FALSE(aborted);
   q.shutdown();
@@ -175,12 +150,12 @@ TEST(LockingCharQueue, ShutdownAbortsSend) {
 TEST(LockingCharQueue, ShutdownAbortsRecv) {
   std::mutex m;
   locking_queue<char, std::size_t, 10> q(m);
-  barrier barrier(2);
+  event ev;
   bool aborted;
-  std::thread consumer([&q, &barrier, &aborted]() {
+  std::thread consumer([&q, &ev, &aborted]() {
     char block[10] = {};
     q.recv(block, 5);
-    barrier.await();
+    ev.notify();
     try {
       q.recv(block, 6);
     } catch (const locking_queue_shut_down&) {
@@ -191,7 +166,7 @@ TEST(LockingCharQueue, ShutdownAbortsRecv) {
     char block[10] = {};
     q.send(block, sizeof block);
   }
-  barrier.await();
+  ev.await();
 
   EXPECT_FALSE(aborted);
   q.shutdown();
