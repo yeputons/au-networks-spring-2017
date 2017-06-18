@@ -13,6 +13,7 @@
 #include "au_stream_socket_protocol.h"
 #include "utils/cyclic_queue.h"
 #include "utils/locking_queue.h"
+#include "utils/event.h"
 
 namespace au_stream_socket {
 
@@ -24,6 +25,7 @@ class messages_broker {
 public:
   static messages_broker& get() {
     static messages_broker p;
+    p.initialized.await();
     return p;
   }
 
@@ -43,6 +45,7 @@ private:
   void process_packet(au_packet packet);
   void add_connection_lock_held(std::shared_ptr<connection_impl> sock);
 
+  event initialized;
   std::thread thread_;
   std::mutex mutex_;
   addr_map<std::shared_ptr<listener_impl>> listeners_;

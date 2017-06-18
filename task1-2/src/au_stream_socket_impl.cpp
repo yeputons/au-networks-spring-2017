@@ -58,6 +58,7 @@ void messages_broker::run() {
   bind_addr.sin_family = AF_INET;
   ensure_or_throw(bind(s, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr)) == 0, socket_error);
 
+  initialized.notify();
   static thread_local char buffer[8192];
   for (;;) {
     sockaddr_in from;
