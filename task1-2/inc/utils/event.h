@@ -1,6 +1,9 @@
 #ifndef SEMAPHORE_H
 #define SEMAPHORE_H
 
+#include <mutex>
+#include <condition_variable>
+
 class event {
 public:
   event() : happened_(false) {
