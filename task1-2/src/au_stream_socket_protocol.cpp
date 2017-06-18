@@ -256,18 +256,20 @@ void connection_impl::send_some_data(Flags flags) {
     #endif
     send_packet(flags, begin_id, data);
 
-    retrier_.retry_after(SEND_ACK_TIMEOUT, [begin_id, flags, data, this]() {
-      std::lock_guard<std::mutex> lock(mutex_);
-      auto &send_window_queue_ = send_window.queue_lock_held();
-      if (send_window_queue_.begin_id() != begin_id) {
-        return true;
-      }
-      #ifdef AU_DEBUG
-      std::cout << "Sending packet with flags=" << static_cast<int>(flags) << ", data starts from " << begin_id << " and goes for " << data.size() << "\n";
-      #endif
-      send_packet(flags, begin_id, data);
-      return false;
-    });
+    if (size > 0) {
+      retrier_.retry_after(SEND_ACK_TIMEOUT, [begin_id, flags, data, this]() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto &send_window_queue_ = send_window.queue_lock_held();
+        if (send_window_queue_.begin_id() != begin_id) {
+          return true;
+        }
+        #ifdef AU_DEBUG
+        std::cout << "Resending packet with flags=" << static_cast<int>(flags) << ", data starts from " << begin_id << " and goes for " << data.size() << std::endl;
+        #endif
+        send_packet(flags, begin_id, data);
+        return false;
+      });
+    }
   }
 }
 
