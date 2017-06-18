@@ -166,18 +166,20 @@ void connection_impl::process_packet(au_packet packet) {
     // TODO: add retry after timeout
     state_ = FIN_RECV;
     std::cout << "Switching --> FIN_RECV\n";
-    send_window.shutdown_lock_held();
-    recv_queue.shutdown_lock_held();
   } else if (state_ == FIN_SENT && packet.flags == (Flags::FIN | Flags::ACK)) {
     send_packet(Flags::ACK, send_window_queue.begin_id(), {});
     // TODO: add retry after timeout
     state_ = TERMINATED;
     std::cout << "Switching FIN_SENT --> TERMINATED\n";
     messages_broker::get().remove_connection_from_process_packet(get_local(), get_remote());
+    send_window.shutdown_lock_held();
+    recv_queue.shutdown_lock_held();
   } else if (state_ == FIN_RECV && packet.flags == Flags::ACK) {
     state_ = TERMINATED;
     std::cout << "Switching FIN_RECV --> TERMINATED\n";
     messages_broker::get().remove_connection_from_process_packet(get_local(), get_remote());
+    send_window.shutdown_lock_held();
+    recv_queue.shutdown_lock_held();
   } else if (state_ == ESTABLISHED) {
     bool send_window_changed = false;
 
@@ -283,8 +285,15 @@ void connection_impl::shutdown() {
       state_ = FIN_SENT;
     }
   }
-  send_window.shutdown();
-  recv_queue.shutdown();
+  // Wait for real shut down
+  for (;;) {
+    char buf[1];
+    try {
+      recv_queue.recv(buf, 1);
+    } catch (const locking_queue_shut_down&) {
+      break;
+    }
+  }
   // TODO: add shutdown after timeout
 }
 
