@@ -22,6 +22,7 @@ bin/server: $(SRCS_server:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o64)
 
 CXX=g++
 CXXFLAGS=-pthread -pedantic -Wall -Wshadow -Wextra -Werror -std=gnu++11 -I$(INCDIR) -g
+#CXXFLAGS+=-DAU_DEBUG
 LDFLAGS=-pthread
 LDLIBS=
 LDLIBS_TEST=-lgtest -lgtest_main
