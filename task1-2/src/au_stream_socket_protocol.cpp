@@ -104,7 +104,7 @@ connection_impl::connection_impl(sockaddr_in local, sockaddr_in remote)
   ensure_or_throw(bind(sock_, reinterpret_cast<sockaddr*>(&local_), sizeof(local_)) == 0, socket_error);
 }
 
-void connection_impl::send_packet(Flags flags, uint32_t sn, const std::vector<char> data) {
+void connection_impl::send_packet(Flags flags, uint32_t sn, std::vector<char> data) {
   au_packet ans;
   ans.source = local_;
   ans.dest = remote_;

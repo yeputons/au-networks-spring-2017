@@ -90,7 +90,7 @@ public:
   void shutdown();
 
 private:
-  void send_packet(Flags flags, uint32_t sn, const std::vector<char> data);
+  void send_packet(Flags flags, uint32_t sn, std::vector<char> data);
 
   std::mutex mutex_;
 
