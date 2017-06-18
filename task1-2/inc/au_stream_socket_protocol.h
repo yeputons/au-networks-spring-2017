@@ -10,7 +10,8 @@ namespace au_stream_socket {
 enum class Flags : uint8_t {
   NONE = 0,
   SYN = 1,
-  ACK = 2
+  ACK = 2,
+  FIN = 4
 };
 
 inline Flags operator|(Flags a, Flags b) {

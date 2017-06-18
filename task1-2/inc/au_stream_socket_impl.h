@@ -33,7 +33,7 @@ public:
   void stop_listen(sockaddr_in addr);
 
   void add_connection(std::shared_ptr<connection_impl> sock);
-  void remove_connection(sockaddr_in local, sockaddr_in remote);
+  void remove_connection_from_process_packet(sockaddr_in local, sockaddr_in remote);
 
 private:
   messages_broker() : thread_(&messages_broker::run, this) {
@@ -42,7 +42,6 @@ private:
 
   void process_packet(au_packet packet);
   void add_connection_lock_held(std::shared_ptr<connection_impl> sock);
-  void remove_connection_lock_held(sockaddr_in local, sockaddr_in remote);
 
   std::thread thread_;
   std::mutex mutex_;
@@ -73,7 +72,10 @@ enum connection_state {
   CLOSED,
   SYN_SENT,
   SYN_RECV,
-  ESTABLISHED
+  ESTABLISHED,
+  FIN_SENT,
+  FIN_RECV,
+  TERMINATED
 };
 
 class connection_impl {

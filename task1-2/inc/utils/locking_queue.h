@@ -17,7 +17,10 @@ public:
 
   void shutdown() {
     std::lock_guard<std::mutex> lock(mutex_);
-    assert(!shutdown_);
+    shutdown_lock_held();
+  }
+
+  void shutdown_lock_held() {
     shutdown_ = true;
     send_cond_.notify_all();
     recv_cond_.notify_all();

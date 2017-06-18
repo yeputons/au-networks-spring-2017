@@ -124,6 +124,7 @@ void connection_impl::start_connection() {
   assert(state_ == CLOSED);
 
   send_packet(Flags::SYN, send_window.queue_lock_held().begin_id() - 1, {});
+  // TODO: add retry after timeout
   std::cout << "Switch --> SYN_SENT\n";
   state_ = SYN_SENT;
 }
@@ -137,6 +138,7 @@ void connection_impl::process_packet(au_packet packet) {
     }
     ack_sn = packet.sn + 1;
     send_packet(Flags::SYN | Flags::ACK, send_window_queue.begin_id() - 1, {});
+    // TODO: add retry after timeout
     state_ = SYN_RECV;
     std::cout << "Switch CLOSED --> SYN_RECV\n";
   } else if (state_ == SYN_SENT && packet.flags == (Flags::SYN | Flags::ACK)) {
@@ -159,6 +161,23 @@ void connection_impl::process_packet(au_packet packet) {
     }
     state_ = ESTABLISHED;
     std::cout << "Switch SYN_RECV --> ESTABLISHED\n";
+  } else if (packet.flags == Flags::FIN) {
+    send_packet(Flags::FIN | Flags::ACK, send_window_queue.begin_id(), {});
+    // TODO: add retry after timeout
+    state_ = FIN_RECV;
+    std::cout << "Switching --> FIN_RECV\n";
+    send_window.shutdown_lock_held();
+    recv_queue.shutdown_lock_held();
+  } else if (state_ == FIN_SENT && packet.flags == (Flags::FIN | Flags::ACK)) {
+    send_packet(Flags::ACK, send_window_queue.begin_id(), {});
+    // TODO: add retry after timeout
+    state_ = TERMINATED;
+    std::cout << "Switching FIN_SENT --> TERMINATED\n";
+    messages_broker::get().remove_connection_from_process_packet(get_local(), get_remote());
+  } else if (state_ == FIN_RECV && packet.flags == Flags::ACK) {
+    state_ = TERMINATED;
+    std::cout << "Switching FIN_RECV --> TERMINATED\n";
+    messages_broker::get().remove_connection_from_process_packet(get_local(), get_remote());
   } else if (state_ == ESTABLISHED) {
     bool send_window_changed = false;
 
@@ -172,12 +191,16 @@ void connection_impl::process_packet(au_packet packet) {
         assert(to_ack);
 
         static thread_local char buf[MAX_SEGMENT_SIZE];
-        std::size_t acked = send_window.try_recv_lock_held(buf, std::min(sizeof(buf), to_ack));
-        assert(acked == to_ack);
-        #ifdef AU_DEBUG
-        std::cout << "Dropped " << acked << " bytes out of send buffer, remaining: " << send_window_queue.begin_id() << " to " << send_window_queue.end_id() << "\n";
-        #endif
-        send_window_changed = true;
+        try {
+          std::size_t acked = send_window.try_recv_lock_held(buf, std::min(sizeof(buf), to_ack));
+          assert(acked == to_ack);
+          #ifdef AU_DEBUG
+          std::cout << "Dropped " << acked << " bytes out of send buffer, remaining: " << send_window_queue.begin_id() << " to " << send_window_queue.end_id() << "\n";
+          #endif
+          send_window_changed = true;
+        } catch (const locking_queue_shut_down&) {
+          break;
+        }
       }
     }
 
@@ -187,13 +210,17 @@ void connection_impl::process_packet(au_packet packet) {
       i++;
       id++;
     }
-    std::size_t flushed = recv_queue.try_send_lock_held(&packet.data[0] + i, packet.data.size() - i);
-    ack_sn += flushed;
-    #ifdef AU_DEBUG
-    if (flushed) {
-      std::cout << "Received " << packet.data.size() << " bytes; flushed " << flushed << " of them; till " << ack_sn << "\n";
+    std::size_t flushed = 0;
+    try {
+      flushed = recv_queue.try_send_lock_held(&packet.data[0] + i, packet.data.size() - i);
+      ack_sn += flushed;
+      #ifdef AU_DEBUG
+      if (flushed) {
+        std::cout << "Received " << packet.data.size() << " bytes; flushed " << flushed << " of them; till " << ack_sn << "\n";
+      }
+      #endif
+    } catch (const locking_queue_shut_down&) {
     }
-    #endif
     if (flushed || send_window_changed) {
       send_some_data(flushed ? Flags::ACK : Flags::NONE);
     }
@@ -220,12 +247,18 @@ void connection_impl::send_some_data(Flags flags) {
     std::cout << "Sending packet with flags=" << static_cast<int>(flags) << ", data starts from " << send_window_queue.begin_id() << " and goes for " << size << "\n";
     #endif
     send_packet(flags, send_window_queue.begin_id(), std::vector<char>(buf, buf + size));
+    // TODO: add retry after timeout
   }
 }
 
 void connection_impl::send(const char *buf, size_t size) {
   while (size > 0) {
-    std::size_t sent = send_window.try_send_or_block(buf, size);
+    std::size_t sent;
+    try {
+      sent = send_window.try_send_or_block(buf, size);
+    } catch (const locking_queue_shut_down&) {
+      throw socket_io_error("Connection terminated");
+    }
     buf += sent;
     size -= sent;
     std::lock_guard<std::mutex> lock(mutex_);
@@ -234,15 +267,25 @@ void connection_impl::send(const char *buf, size_t size) {
 }
 
 void connection_impl::recv(char *buf, size_t size) {
-  recv_queue.recv(buf, size);
+  try {
+    recv_queue.recv(buf, size);
+  } catch (const locking_queue_shut_down&) {
+    throw socket_eof_error("EOF");
+  }
 }
 
 void connection_impl::shutdown() {
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (state_ <= ESTABLISHED) {
+      send_packet(Flags::FIN, send_window.queue_lock_held().begin_id(), {});
+      // TODO: add retry after timeout
+      state_ = FIN_SENT;
+    }
+  }
   send_window.shutdown();
   recv_queue.shutdown();
-  // TODO: add graceful close
   // TODO: add shutdown after timeout
-  // TODO: add retry after timeout
 }
 
 }  // namespace au_stream_socket

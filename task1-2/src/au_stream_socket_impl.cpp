@@ -35,15 +35,18 @@ void messages_broker::add_connection_lock_held(std::shared_ptr<connection_impl> 
   conns.insert(sock->get_local(), sock);
 }
 
-//void messages_broker::remove_connection(sockaddr_in local, sockaddr_in remote) {
-//  std::lock_guard<std::mutex> lock(mutex_);
-//  remove_connection_lock_held(local, remote);
-//  // TODO
-//}
-
-//void messages_broker::remove_connection_lock_held(sockaddr_in local, sockaddr_in remote) {
-//  // TODO
-//}
+void messages_broker::remove_connection_from_process_packet(sockaddr_in local, sockaddr_in remote) {
+  // Lock is already held.
+  auto conns = connections_.find(remote);
+  if (conns == connections_.end()) {
+    throw socket_error("No such connection");
+  }
+  auto conns2 = conns->second.find(local);
+  if (conns2 == conns->second.end()) {
+    throw socket_error("No such connection");
+  }
+  conns->second.erase(conns2);
+}
 
 void messages_broker::run() {
   SOCKET_STARTUP();
