@@ -11,6 +11,7 @@ namespace au_stream_socket {
 
 static const size_t MAX_SEGMENT_SIZE = 1000;
 static const size_t AU_PACKET_HEADER_SIZE = 20;
+static const retrier::duration CONN_ACK_TIMEOUT = std::chrono::milliseconds(100);
 static const retrier::duration SEND_ACK_TIMEOUT = std::chrono::milliseconds(100);
 
 // Bytes  Description
@@ -126,34 +127,62 @@ void connection_impl::start_connection() {
   assert(state_ == CLOSED);
 
   send_packet(Flags::SYN, send_window.queue_lock_held().begin_id() - 1, {});
-  // TODO: add retry after timeout
   std::cout << "Switch --> SYN_SENT\n";
   state_ = SYN_SENT;
+  retrier_.retry_after(CONN_ACK_TIMEOUT, [this]() {
+    std::lock_guard<std::mutex> lock_(mutex_);
+    if (state_ != SYN_SENT) {
+      return true;
+    }
+    std::cout << "Re-send SYN (timeout)\n";
+    send_packet(Flags::SYN, send_window.queue_lock_held().begin_id() - 1, {});
+    return false;
+  });
 }
 
 void connection_impl::process_packet(au_packet packet) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto &send_window_queue = send_window.queue_lock_held();
-  if (state_ == CLOSED && packet.flags == Flags::SYN) {
+  if ((state_ == CLOSED || state_ == SYN_RECV) && packet.flags == Flags::SYN) {
     if (!packet.data.empty()) {
       return;  // Fail
     }
-    ack_sn = packet.sn + 1;
+    if (state_ == CLOSED) {
+      ack_sn = packet.sn + 1;
+    }
     send_packet(Flags::SYN | Flags::ACK, send_window_queue.begin_id() - 1, {});
-    // TODO: add retry after timeout
+    if (state_ == CLOSED) {
+      std::cout << "Switch CLOSED --> SYN_RECV\n";
+    } else {
+      std::cout << "Re-confirm SYN_RECV (received SYN again)\n";
+    }
     state_ = SYN_RECV;
-    std::cout << "Switch CLOSED --> SYN_RECV\n";
-  } else if (state_ == SYN_SENT && packet.flags == (Flags::SYN | Flags::ACK)) {
+    retrier_.retry_after(CONN_ACK_TIMEOUT, [this]() {
+      std::lock_guard<std::mutex> lock_(mutex_);
+      if (state_ != SYN_RECV) {
+        return true;
+      }
+      std::cout << "Re-confirm SYN_RECV (timeout)\n";
+      send_packet(Flags::SYN | Flags::ACK, send_window.queue_lock_held().begin_id() - 1, {});
+      return false;
+    });
+  } else if ((state_ == SYN_SENT || state_ == ESTABLISHED) && packet.flags == (Flags::SYN | Flags::ACK)) {
     if (!packet.data.empty()) {
       return;  // Fail
     }
     if (send_window_queue.begin_id() != packet.ack_sn) {
       return;  // Fail
     }
-    ack_sn = packet.sn + 1;
+    if (state_ == SYN_SENT) {
+      ack_sn = packet.sn + 1;
+    }
     send_packet(Flags::ACK, send_window_queue.begin_id(), {});
+    if (state_ == SYN_SENT) {
+      std::cout << "Switch SYN_SENT --> ESTABLISHED\n";
+    } else {
+      std::cout << "Re-confirm SYN_SENT (received SYN-ACK again)\n";
+    }
     state_ = ESTABLISHED;
-    std::cout << "Switch SYN_SENT --> ESTABLISHED\n";
   } else if (state_ == SYN_RECV && packet.flags == Flags::ACK) {
     if (!packet.data.empty()) {
       return;  // Fail
