@@ -252,7 +252,7 @@ void connection_impl::send_some_data(Flags flags) {
     std::vector<char> data(buf, buf + size);
 
     #ifdef AU_DEBUG
-    std::cout << "Sending packet with flags=" << static_cast<int>(flags) << ", data starts from " << send_window_queue.begin_id() << " and goes for " << data.size << "\n";
+    std::cout << "Sending packet with flags=" << static_cast<int>(flags) << ", data starts from " << send_window_queue.begin_id() << " and goes for " << data.size() << "\n";
     #endif
     send_packet(flags, begin_id, data);
 
@@ -263,7 +263,7 @@ void connection_impl::send_some_data(Flags flags) {
         return true;
       }
       #ifdef AU_DEBUG
-      std::cout << "Sending packet with flags=" << static_cast<int>(flags) << ", data starts from " << send_window_queue.begin_id() << " and goes for " << data.size() << "\n";
+      std::cout << "Sending packet with flags=" << static_cast<int>(flags) << ", data starts from " << begin_id << " and goes for " << data.size() << "\n";
       #endif
       send_packet(flags, begin_id, data);
       return false;
