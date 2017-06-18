@@ -91,6 +91,7 @@ public:
 
 private:
   void send_packet(Flags flags, uint32_t sn, std::vector<char> data);
+  void send_some_data(Flags flags);
 
   std::mutex mutex_;
 
@@ -99,8 +100,7 @@ private:
   connection_state state_;
   uint32_t ack_sn;
 
-  cyclic_queue<char, uint32_t, 4096> send_window;
-  locking_queue<char, uint32_t, 4096> send_queue;
+  locking_queue<char, uint32_t, 4096> send_window;
   locking_queue<char, uint32_t, 4096> recv_queue;
 };
 
